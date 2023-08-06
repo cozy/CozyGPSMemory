@@ -3,7 +3,7 @@ import BackgroundGeolocation from 'react-native-background-geolocation';
 import { Platform } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import React, { useState } from 'react';
-import { getUniqueId, getManufacturer } from 'react-native-device-info';
+import { getUniqueId } from 'react-native-device-info';
 
 import {
 	Button,
@@ -26,6 +26,7 @@ const stopTimeoutDetectionMill = 0.8 * stopTimeoutMin * 60 * 1000; // Réduit po
 const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
 const batch_size = 1000;
+const useUniqueDeviceID = false;
 
 async function _storeFlagFailUpload(Flag) {
 	try {
@@ -62,7 +63,7 @@ export async function _getId() {
 	try {
 		let value = await AsyncStorage.getItem('Id');
 		if (value == undefined) {
-			await _storeId(await getUniqueId()); // Device ID par défaut
+			await _storeId(useUniqueDeviceID ? await getUniqueId() : Math.random().toString(36).replace('0.', '')); // ID random ou Device ID
 		}
 		value = await AsyncStorage.getItem('Id'); // On s'assure que c'est enregistré
 		return value;
