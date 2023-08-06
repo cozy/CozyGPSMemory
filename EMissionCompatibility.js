@@ -27,7 +27,6 @@ const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
 const batch_size = 1000;
 
-
 async function _storeFlagFailUpload(Flag) {
 	try {
 		await AsyncStorage.setItem('FlagFailUpload', Flag ? 'true' : 'false');
@@ -123,6 +122,7 @@ export async function ClearAllGeolocationData() {
 	// Pas testé
 	await AsyncStorage.multiRemove(['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']);
 	await BackgroundGeolocation.destroyLocations();
+	console.log("Everything cleared");
 }
 
 async function GenerateToken(user) {
@@ -178,12 +178,12 @@ function TranslateToEMissionLocationPoint(location_point) {
 			"latitude": location_point['coords']['latitude'],
 			"longitude": location_point['coords']['longitude'],
 			"sensed_speed": location_point['coords']['speed'],
-			"ts": ts,
+			"ts": ts + 0.1,
 			"vaccuracy": location_point['coords']['altitude_accuracy']
 		},
 		"metadata": {
 			"platform": "ios",
-			"write_ts": ts,
+			"write_ts": ts + 0.1,
 			"time_zone": "UTC",
 			"key": "background/location",
 			"read_ts": 0,
@@ -206,11 +206,11 @@ function TranslateToEMissionMotionActivityPoint(location) {
 				'stationary': location['activity']['type'] == 'still',
 				'confidence': location["activity"]['confidence'],
 				'fmt_time': location['timestamp'],
-				'ts': ts,
+				'ts': ts + 0.2,
 				'confidence_level': 'high',
 			},
 			'metadata': {
-				'write_ts': ts,
+				'write_ts': ts + 0.2,
 				'time_zone': 'UTC',
 				'platform': 'ios',
 				'key': 'background/motion_activity',
@@ -308,7 +308,29 @@ function Transition(state, transition, transition_ts) {
 	});
 }
 
-async function SmartSend(locations, user, force = false) {
+function AddStartTransitions(list, ts) {
+	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_EXITED_GEOFENCE", ts + 0.1));
+	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_TRIP_STARTED", ts + 0.2));
+	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_VISIT_ENDED", ts + 0.3));
+	list.push(Transition("STATE_ONGOING_TRIP", "T_TRIP_STARTED", ts + 0.4));
+}
+
+function AddStopTransitions(list, ts, last_location) {
+	if (last_location != undefined) {
+		list.push(TranslateToEMissionLocationPoint(last_location));
+		list.at(-1)['data']['ts'] = ts;
+		list.at(-1)['metadata']['write_ts'] = ts;
+		// No filtered_location, does not seem necessary
+	}
+	list.push(Transition("STATE_ONGOING_TRIP", "T_TRIP_END_DETECTED", ts + 0.1));
+	list.push(Transition("STATE_ONGOING_TRIP", "T_END_TRIP_TRACKING", ts + 0.2));
+	list.push(Transition("STATE_ONGOING_TRIP", "T_TRIP_ENDED", ts + 0.3));
+	list.push(Transition("STATE_ONGOING_TRIP", "T_FORCE_STOP_TRACKING", ts + 0.4));
+	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_FORCE_STOP_TRACKING", ts + 0.5));
+	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_NOP", ts + 0.6));
+}
+
+async function SmartSend(locations, user, force = false, copyToClipboardSentData = false) {
 	if (force) {
 		//Si on force l'upload, marquer un arrêt maintenant
 		await RegisterStopNow();
@@ -321,15 +343,13 @@ async function SmartSend(locations, user, force = false) {
 		console.log("Uploading up to:", lastStop);
 		let phone_to_server = [[]];
 		let phone_to_serverIndex = 0;
-
-		phone_to_server[phone_to_serverIndex].push(Transition("STATE_WAITING_FOR_TRIP_START", "T_EXITED_GEOFENCE", Math.floor(parseISOString(locations[0]["timestamp"]).getTime() / 1000) - 3));
-		phone_to_server[phone_to_serverIndex].push(Transition("STATE_WAITING_FOR_TRIP_START", "T_TRIP_STARTED", Math.floor(parseISOString(locations[0]["timestamp"]).getTime() / 1000) - 2));
-		phone_to_server[phone_to_serverIndex].push(Transition("STATE_ONGOING_TRIP", "T_TRIP_STARTED", Math.floor(parseISOString(locations[0]["timestamp"]).getTime() / 1000) - 1));
-
 		let index = 0;
-		while (index < locations.length && Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) <= lastStop) {
-			phone_to_server[phone_to_serverIndex].push(TranslateToEMissionLocationPoint(locations[index]));
 
+		AddStartTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) - 1);
+
+		while (index < locations.length && Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) <= lastStop) {
+
+			phone_to_server[phone_to_serverIndex].push(TranslateToEMissionLocationPoint(locations[index]));
 			//Condition de filtered_location:
 			if (locations[index]['coords']['accuracy'] <= 200) { // Précision suffisante
 				if (index == 0 || (locations[index]['coords']['longitude'] != locations[index - 1]['coords']['longitude'] || locations[index]['coords']['latitude'] != locations[index - 1]['coords']['latitude'])) { // Différent du point précédent (check si on est au premier))
@@ -340,6 +360,19 @@ async function SmartSend(locations, user, force = false) {
 
 			//phone_to_server[phone_to_serverIndex].push(TranslateToEMissionMotionActivityPoint(locations[index]));
 
+
+			if (index == locations.length - 1) {
+				AddStopTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) + 60);
+			}
+			else if (Math.floor(parseISOString(locations[index + 1]["timestamp"]).getTime() / 1000) - Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) > 500) {
+
+				AddStopTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) + 60);
+				AddStartTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index + 1]["timestamp"]).getTime() / 1000) - 1);
+				// In theory, according to the if statement, the start will always be after the end
+
+			}
+
+
 			index++;
 			if (phone_to_server[phone_to_serverIndex].length > batch_size) {
 				phone_to_server.push([]);
@@ -347,18 +380,15 @@ async function SmartSend(locations, user, force = false) {
 			}
 		}
 
-		phone_to_server.at(-1).push(Transition("STATE_ONGOING_TRIP", "T_TRIP_END_DETECTED", lastStop + 0.1));
-		phone_to_server.at(-1).push(Transition("STATE_ONGOING_TRIP", "T_END_TRIP_TRACKING", lastStop + 0.2));
-		phone_to_server.at(-1).push(Transition("STATE_ONGOING_TRIP", "T_TRIP_ENDED", lastStop + 0.3));
-		phone_to_server.at(-1).push(Transition("STATE_WAITING_FOR_TRIP_START", "T_NOP", lastStop + 0.4));
-		//STOPPED_MOVING donne une erreur, ios ? plus utilisé ?
 
+		//STOPPED_MOVING donne une erreur, ios ? plus utilisé ?
+		allRequests = '';
 		for (let batchIndex = 0; batchIndex < phone_to_server.length; batchIndex++) {
 			let JsonRequest = {
 				'user': user,
 				'phone_to_server': phone_to_server[batchIndex]
 			}
-			Clipboard.setString(JSON.stringify(JsonRequest));
+			// Clipboard.setString(JSON.stringify(JsonRequest));
 
 			let response = await fetch(serverURL + '/usercache/put', {
 				method: 'POST',
@@ -367,7 +397,16 @@ async function SmartSend(locations, user, force = false) {
 				},
 				body: JSON.stringify(JsonRequest),
 			})
+
+			allRequests += JSON.stringify(JsonRequest);
+			if (batchIndex == phone_to_server.length - 1) {
+				allRequests += "Stops: " + JSON.stringify(await _getStops());
+			}
+
 			if (!response.ok) {
+				if (copyToClipboardSentData) {
+					Clipboard.setString(allRequests + 'Stops: ' + JSON.stringify(await _getStops()));
+				}
 				throw new Error(String('Error in request response:', response.status, response.statusText, await response.text()));
 
 			} else {
@@ -375,11 +414,13 @@ async function SmartSend(locations, user, force = false) {
 				if (DestroyLocalOnSuccess && batchIndex == phone_to_server.length - 1) {
 					console.log('Destroying local location records');
 					BackgroundGeolocation.destroyLocations();
+					_storeStops([]);
 					//TODO proprement
 
 				}
 			}
 		}
+		Clipboard.setString(allRequests);
 	} else { console.log("Pas de stops et non forcé ou pas de points; pas d'upload"); }
 
 	//TODO : nettoyer les stops de la mémoire solide
@@ -517,9 +558,8 @@ export function GeolocationSwitch() {
 			console.log('[onMotionChange]', event);
 			if (!event.isMoving) {
 				await RegisterStopNow();
-
+				UploadData();
 			}
-			UploadData();
 
 		});
 
@@ -572,6 +612,7 @@ export function GeolocationSwitch() {
 			onMotionChange.remove();
 			onActivityChange.remove();
 			onProviderChange.remove();
+			onConnectivityChange.remove();
 		}
 	}, []);
 
@@ -583,6 +624,7 @@ export function GeolocationSwitch() {
 			BackgroundGeolocation.start();
 		} else {
 			console.log('Disabling tracking');
+			RegisterStopNow();
 			BackgroundGeolocation.stop();
 			setLocation('');
 		}
