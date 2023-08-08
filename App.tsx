@@ -146,16 +146,16 @@ function App(): JSX.Element {
         />
 
         <Button
-          onPress={async function () {
-            setIdInputPopupVisible(true);
-          }}
-          title="Manually redefine secret Tracker Id"
+          onPress={() => { UploadMobility(true); }}
+          title="Force upload pending tracks to E-Mission"
           disabled={!devMode}
         />
 
         <Button
-          onPress={() => { UploadMobility(true); }}
-          title="Force upload pending tracks to E-Mission"
+          onPress={async function () {
+            setIdInputPopupVisible(true);
+          }}
+          title="Manually redefine secret Tracker Id"
           disabled={!devMode}
         />
 

@@ -27,6 +27,30 @@ const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
 const batch_size = 1000;
 const useUniqueDeviceID = false;
+const autoUploadDefault = true;
+
+async function _storeAutoUploadFlag(Flag) {
+	try {
+		await AsyncStorage.setItem('AutoUploadFlag', Flag ? 'true' : 'false');
+	} catch (error) {
+		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		throw (error);
+	}
+}
+
+async function _getAutoUploadFlag() {
+	try {
+		let value = await AsyncStorage.getItem('AutoUploadFlag');
+		if (value == undefined) {
+			value = autoUploadDefault;
+			_storeAutoUploadFlag(value);
+		}
+		return !(value == 'false'); // Si undefined malgré tout on considère erreur
+	} catch (error) {
+		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		throw (error);
+	}
+}
 
 async function _storeFlagFailUpload(Flag) {
 	try {
@@ -511,7 +535,7 @@ export async function UploadData(force = false) { // WARNING: le message qui pr�
 							if (await _getFlagFailUpload()) { // On vérifie que l'upload n'a pas marché depuis
 								console.log('Second attempt at uploading (fail', retryOnFailTime, 'ago)');
 								try {
-									await UploadData(false);
+									await UploadData();
 								} catch { console.log('Failed again'); }
 							} else {
 								console.log('Cancelling second attempt, succeeded since');
@@ -559,7 +583,12 @@ export function GeolocationSwitch() {
 			console.log('[onMotionChange]', event);
 			if (!event.isMoving) {
 				await RegisterStopNow();
-				UploadData();
+				if (await _getAutoUploadFlag()) {
+					console.log("Auto uploading");
+					UploadData();
+				} else {
+					console.log("Not auto uploading");
+				}
 			}
 
 		});
@@ -576,8 +605,9 @@ export function GeolocationSwitch() {
 			// ne trigger pas en emul ios, donne event = {'connected': false}
 			// à tester en réel
 			console.log('[onConnectivityChange]', event);
-			if (event.connected && await _getFlagFailUpload()) {
-				UploadData(false);
+			if (event.connected && await _getFlagFailUpload() && await _getAutoUploadFlag()) {
+				console.log('Auto uploading');
+				UploadData();
 			}
 		})
 
