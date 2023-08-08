@@ -197,17 +197,17 @@ function TranslateToEMissionLocationPoint(location_point) {
 			"accuracy": location_point['coords']['accuracy'],
 			"altitude": location_point['coords']['altitude'],
 			"bearing": location_point['coords']['heading'],
-			"filter": "distance",
+			"filter": Platform.OS === 'ios' ? 'distance' : 'time',
 			"floor": 0,
 			"fmt_time": location_point['timestamp'],
 			"latitude": location_point['coords']['latitude'],
 			"longitude": location_point['coords']['longitude'],
 			"sensed_speed": location_point['coords']['speed'],
-			"ts": ts + 0.1,
+			"ts": ts + 0.1, // It's silly, but some rare operations of e-mission will take a timestamp without a decimal point as an integer and crash. Since it would be a hard crash, the pipeline will not attempt again for this user so the user would never get new tracks without intervention. This was the simplest way to insure that JSON.stringify() will leave a decimal point.
 			"vaccuracy": location_point['coords']['altitude_accuracy']
 		},
 		"metadata": {
-			"platform": "ios",
+			"platform": Platform.OS,
 			"write_ts": ts + 0.1,
 			"time_zone": "UTC",
 			"key": "background/location",
@@ -323,7 +323,7 @@ function Transition(state, transition, transition_ts) {
 
 		},
 		"metadata": {
-			"platform": "ios",
+			"platform": Platform.OS,
 			"write_ts": transition_ts,
 			"time_zone": "UTC",
 			"key": "statemachine/transition",
