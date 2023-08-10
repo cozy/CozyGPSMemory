@@ -197,7 +197,7 @@ function TranslateToEMissionLocationPoint(location_point) {
 			"accuracy": location_point['coords']['accuracy'],
 			"altitude": location_point['coords']['altitude'],
 			"bearing": location_point['coords']['heading'],
-			"filter": Platform.OS === 'ios' ? 'distance' : 'time',
+			"filter": Platform.OS === 'ios' ? 'distance' : 'distance',
 			"floor": 0,
 			"fmt_time": location_point['timestamp'],
 			"latitude": location_point['coords']['latitude'],
