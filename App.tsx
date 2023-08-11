@@ -48,9 +48,9 @@ import BackgroundGeolocation, {
   ProviderChangeEvent,
   ConnectivityChangeEvent,
   Subscription
-} from "react-native-background-geolocation";
+} from 'react-native-background-geolocation';
 
-import { UploadData, _storeId, _getId, _storeToken, _getToken, ClearAllGeolocationData, UpdateId, GeolocationSwitch } from "./EMissionCompatibility.js"
+import { UploadData, _getId, ClearAllCozyGPSMemoryData, UpdateId, GeolocationSwitch } from './EMissionCompatibility.js'
 
 const devMode = true;
 
@@ -63,15 +63,17 @@ function App(): JSX.Element {
 
   const [PopUpVisible, setPopUpVisible] = useState(false);
   const [idInputPopupVisible, setIdInputPopupVisible] = useState(false);
-
-  const UploadMobility = async (force: boolean) => {
-    await UploadData(force);
+  const DisplayIdInputPopup = async () => {
+    setIdBoxTest(await _getId() || '');
+    setIdInputPopupVisible(true);
+  }
+  const ForceUploadMobility = async () => {
+    await UploadData(true, false);
     BackgroundGeolocation.getLocations().then(async (locations) => {
       if (locations.length > 0) { // Méthode grossière, mais ça résout le problème
-        // Ne marchera pas si on ne détruit pas les locations avec SendData(true)
-        MakePopup("❌ There are still local positions");
+        MakePopup('❌ There are still local positions');
       } else {
-        MakePopup("✅ All mobility measures uploaded!");
+        MakePopup('✅ All mobility measures uploaded!');
       }
     })
   };
@@ -86,7 +88,7 @@ function App(): JSX.Element {
 
   const [IdBoxText, setIdBoxTest] = useState('');
 
-  const [myText, setMyText] = useState("No message");
+  const [popUpText, setPopUpText] = useState('No message');
   const PopUp = () => {
     return (
       <Modal
@@ -97,8 +99,8 @@ function App(): JSX.Element {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalText}>{myText}</Text>
-            <Button title="Close" onPress={closeModal} />
+            <Text style={styles.modalText}>{popUpText}</Text>
+            <Button title='Close' onPress={closeModal} />
           </View>
         </View>
       </Modal>
@@ -107,19 +109,30 @@ function App(): JSX.Element {
 
 
   function MakePopup(text: string) {
-    setMyText(text);
+    setPopUpText(text);
     setPopUpVisible(true);
   }
 
   async function UpdateIdFromButton(newId: string) {
-    console.log("Updating Id to", newId);
-    try {
-      MakePopup(await UpdateId(newId));
-    } catch (error) {
-      console.log(error);
-      MakePopup("Error: Couldn't update Id");
-    }
+    let result = await UpdateId(newId);
+    switch (result) {
 
+      case 'SUCCESS_STORING_SUCCESS_CREATING':
+        MakePopup('✅ ID successfully updated');
+        break;
+
+      case 'SUCCESS_STORING_FAIL_CREATING':
+        MakePopup('🛜 Couldn\'t create ID on the Openpath server, but it will be done before the next upload');
+        break;
+
+      case 'SAME_ID_OR_INVALID_ID':
+        MakePopup('❌ Same ID or invalid ID');
+        break;
+
+      default:
+        MakePopup('❌ Unexpected error updating the user ID')
+        break;
+    }
   }
 
   return (
@@ -131,44 +144,47 @@ function App(): JSX.Element {
           justifyContent: 'center',
           alignContent: 'center'
         }}>
+        <View>
 
-        <GeolocationSwitch></GeolocationSwitch>
+          <GeolocationSwitch></GeolocationSwitch>
 
-        <Button
-          onPress={async function () {
-            let idToCopy = await _getId();
-            if (idToCopy == undefined) {
-              idToCopy = "undefinedId";
-            }
-            Clipboard.setString(idToCopy);
-          }}
-          title="Copy secret Tracker Id (for konnector)"
-        />
+          <Button
+            onPress={async function () {
+              let idToCopy = await _getId();
+              if (idToCopy == undefined) {
+                idToCopy = 'undefinedId';
+              }
+              Clipboard.setString(idToCopy);
+            }}
+            title='Copy secret Tracker Id (for konnector)'
+          />
 
-        <Button
-          onPress={() => { UploadMobility(true); }}
-          title="Force upload pending tracks to E-Mission"
-          disabled={!devMode}
-        />
+          <Button
+            onPress={() => { ForceUploadMobility(); }}
+            title='Force upload pending tracks to E-Mission'
+            disabled={!devMode}
+          />
 
-        <Button
-          onPress={async function () {
-            setIdInputPopupVisible(true);
-          }}
-          title="Manually redefine secret Tracker Id"
-          disabled={!devMode}
-        />
+          <Button
+            onPress={async function () {
+              DisplayIdInputPopup();
+            }}
+            title='Manually redefine secret Tracker Id'
+            disabled={!devMode}
+          />
 
+        </View>
         <Button
           onPress={async function () {
             try {
-              await ClearAllGeolocationData();
-              MakePopup("Deleted everything");
+              await ClearAllCozyGPSMemoryData();
+              MakePopup('Deleted everything');
             } catch (error) {
-              MakePopup("Couldn't purge\n" + error)
+              MakePopup('Couldn\'t purge\n' + error)
             }
           }}
-          title="Purge all local data"
+          title='Purge all local data'
+          color={'#ff3b30'}
           disabled={!devMode}
         />
 
@@ -200,11 +216,11 @@ function App(): JSX.Element {
                   fontSize: 18,
                 }}
               />
-              <Button title="Cancel (keep existing Id)" onPress={async function () {
+              <Button title='Cancel (keep existing Id)' onPress={async function () {
                 closeIdInputPopup();
               }
               } />
-              <Button title="Validate" onPress={async function () {
+              <Button title='Validate' onPress={async function () {
                 closeIdInputPopup();
                 UpdateIdFromButton(IdBoxText);
               }

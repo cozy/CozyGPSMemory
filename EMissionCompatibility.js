@@ -29,55 +29,66 @@ const batch_size = 1000;
 const useUniqueDeviceID = false;
 const autoUploadDefault = true;
 
+// Storage adresses used by AsyncStorage
+// Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
+// Old adresses: ['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']
+
+const IDStorageAdress = 'CozyGPSMemory.ID';
+const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
+const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
+const StopsStorageAdress = 'CozyGPSMemory.Stops';
+const AutoUploadFlagStorageAdress = 'CozyGPSMemory.AutoUploadFlag';
+
+
 async function _storeAutoUploadFlag(Flag) {
 	try {
-		await AsyncStorage.setItem('AutoUploadFlag', Flag ? 'true' : 'false');
+		await AsyncStorage.setItem(AutoUploadFlagStorageAdress, Flag ? 'true' : 'false');
 	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		console.log('Error while storing AutoUploadFlag:', error);
 		throw (error);
 	}
 }
 
 async function _getAutoUploadFlag() {
 	try {
-		let value = await AsyncStorage.getItem('AutoUploadFlag');
+		let value = await AsyncStorage.getItem(AutoUploadFlagStorageAdress);
 		if (value == undefined) {
 			value = autoUploadDefault;
 			_storeAutoUploadFlag(value);
 		}
 		return !(value == 'false'); // Si undefined malgré tout on considère erreur
 	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		console.log('Error while getting AutoUploadFlag:', error);
 		throw (error);
 	}
 }
 
 async function _storeFlagFailUpload(Flag) {
 	try {
-		await AsyncStorage.setItem('FlagFailUpload', Flag ? 'true' : 'false');
+		await AsyncStorage.setItem(FlagFailUploadStorageAdress, Flag ? 'true' : 'false');
 	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		console.log('Error while storing FlagFailUpload:', error);
 		throw (error);
 	}
 };
 
 async function _getFlagFailUpload() {
 	try {
-		let value = await AsyncStorage.getItem('FlagFailUpload');
+		let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress);
 		if (value == undefined) {
 			value = false;
 			_storeFlagFailUpload(value);
 		}
 		return !(value == 'false'); // Si undefined malgré tout on considère erreur
 	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		console.log('Error while getting FlagFailUpload:', error);
 		throw (error);
 	}
 }
 
 export async function _storeId(Id) {
 	try {
-		await AsyncStorage.setItem('Id', Id);
+		await AsyncStorage.setItem(IDStorageAdress, Id);
 	} catch (error) {
 		throw (error);
 	}
@@ -85,14 +96,20 @@ export async function _storeId(Id) {
 
 export async function _getId() {
 	try {
-		let value = await AsyncStorage.getItem('Id');
+		let value = await AsyncStorage.getItem(IDStorageAdress);
 		if (value == undefined) {
-			await _storeId(useUniqueDeviceID ? await getUniqueId() : Math.random().toString(36).replace('0.', '')); // ID random ou Device ID
+			console.log("No current ID, generating a new one...");
+			value = useUniqueDeviceID ? await getUniqueId() : Math.random().toString(36).replace('0.', '');
+			await _storeId(value); // random ID or device ID depending on config
 		}
-		value = await AsyncStorage.getItem('Id'); // On s'assure que c'est enregistré
-		return value;
+		if (value != await AsyncStorage.getItem(IDStorageAdress)) {
+			throw new Error('New ID couldn\'t be stored'); // We make sure it is stored
+		} else {
+			console.log("Found ID:", value);
+			return value;
+		}
 	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		console.log('Error while getting ID:', error);
 		throw (error);
 	}
 };
@@ -100,15 +117,16 @@ export async function _getId() {
 
 export async function _storeStops(stops) {
 	try {
-		await AsyncStorage.setItem('stops', JSON.stringify(stops));
+		await AsyncStorage.setItem(StopsStorageAdress, JSON.stringify(stops));
 	} catch (error) {
+		console.log('Error while storing stops:', error);
 		throw (error);
 	}
 };
 
 export async function _getStops() {
 	try {
-		let value = await AsyncStorage.getItem('stops');
+		let value = await AsyncStorage.getItem(StopsStorageAdress);
 		if (value == null) {
 			value = [];
 		} else {
@@ -116,71 +134,39 @@ export async function _getStops() {
 		}
 		return value;
 	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
+		console.log('Error while getting stops:', error);
 		throw (error);
 	}
 };
 
-export async function _storeToken(Id) {
-	try {
-		await AsyncStorage.setItem(
-			'Token',
-			Id,
-		);
-	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
-		throw (error);
-	}
-};
-
-export async function _getToken() {
-	try {
-		let value = await AsyncStorage.getItem('Token');
-		return value;
-	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
-		throw (error);
-	}
-}
-
-export async function ClearAllGeolocationData() {
-	// Pas testé
-	await AsyncStorage.multiRemove(['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']);
+export async function ClearAllCozyGPSMemoryData() {
 	await BackgroundGeolocation.destroyLocations();
-	console.log("Everything cleared");
+	await AsyncStorage.multiRemove([IDStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, StopsStorageAdress, AutoUploadFlagStorageAdress]);
+	await AsyncStorage.multiRemove(['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']); // Just to clean up devices upgrading from older builds since variable names were updated
+	console.log('Everything cleared');
 }
 
-async function GenerateToken(user) {
-	let newToken = undefined;
-	try {
-		let response = await fetch(serverURL + '/profile/create', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({ 'user': user }),
-		})
-		// console.log(response);
-		if (!response.ok) {
-			console.log('Error getting uuid:', response.status, response.statusText);
-
-		} else {
-
-			jsonTokenResponse = await response.json()
-			console.log('Success getting uuid for', user, ':', jsonTokenResponse['uuid']);
-			newToken = jsonTokenResponse['uuid'];
-		}
-
-	} catch (message) {
-		console.log('Error contacting server to get uuid', message);
+async function CreateUser(user) {
+	let response = await fetch(serverURL + '/profile/create', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ 'user': user }),
+	});
+	if (!response.ok) {
+		console.log('Error creating user:', response.status, response.statusText);
+		throw new Error('FAILED_EMISSION_USER_CREATION'); // Could be no Internet, offline server or unknown issue. Won't trigger if user already exists.
+	} else {
+		jsonTokenResponse = await response.json();
+		console.log('Success creating user', user, 'UUID:', jsonTokenResponse['uuid']);
 	}
-	return newToken;
 }
 
 async function RegisterStopNow() {
 	stops = await _getStops();
 	let new_stop = Math.floor(Date.now() / 1000);
-	console.log("Adding stop:", new_stop);
+	console.log('Adding stop:', new_stop);
 	stops.push(new_stop);
 	await _storeStops(stops);
 }
@@ -193,26 +179,26 @@ function parseISOString(ISOString) {
 function TranslateToEMissionLocationPoint(location_point) {
 	let ts = Math.floor(parseISOString(location_point['timestamp']).getTime() / 1000)
 	return {
-		"data": {
-			"accuracy": location_point['coords']['accuracy'],
-			"altitude": location_point['coords']['altitude'],
-			"bearing": location_point['coords']['heading'],
-			"filter": Platform.OS === 'ios' ? 'distance' : 'distance',
-			"floor": 0,
-			"fmt_time": location_point['timestamp'],
-			"latitude": location_point['coords']['latitude'],
-			"longitude": location_point['coords']['longitude'],
-			"sensed_speed": location_point['coords']['speed'],
-			"ts": ts + 0.1, // It's silly, but some rare operations of e-mission will take a timestamp without a decimal point as an integer and crash. Since it would be a hard crash, the pipeline will not attempt again for this user so the user would never get new tracks without intervention. This was the simplest way to insure that JSON.stringify() will leave a decimal point.
-			"vaccuracy": location_point['coords']['altitude_accuracy']
+		'data': {
+			'accuracy': location_point['coords']['accuracy'],
+			'altitude': location_point['coords']['altitude'],
+			'bearing': location_point['coords']['heading'],
+			'filter': Platform.OS === 'ios' ? 'distance' : 'distance',
+			'floor': 0,
+			'fmt_time': location_point['timestamp'],
+			'latitude': location_point['coords']['latitude'],
+			'longitude': location_point['coords']['longitude'],
+			'sensed_speed': location_point['coords']['speed'],
+			'ts': ts + 0.1, // It's silly, but some rare operations of e-mission will take a timestamp without a decimal point as an integer and crash. Since it would be a hard crash, the pipeline will not attempt again for this user so the user would never get new tracks without intervention. This was the simplest way to insure that JSON.stringify() will leave a decimal point.
+			'vaccuracy': location_point['coords']['altitude_accuracy']
 		},
-		"metadata": {
-			"platform": Platform.OS,
-			"write_ts": ts + 0.1,
-			"time_zone": "UTC",
-			"key": "background/location",
-			"read_ts": 0,
-			"type": "sensor-data"
+		'metadata': {
+			'platform': Platform.OS,
+			'write_ts': ts + 0.1,
+			'time_zone': 'UTC',
+			'key': 'background/location',
+			'read_ts': 0,
+			'type': 'sensor-data'
 		}
 	}
 }
@@ -229,7 +215,7 @@ function TranslateToEMissionMotionActivityPoint(location) {
 				'running': location['activity']['type'] == 'running',
 				'automotive': location['activity']['type'] == 'in_vehicle', // Stationary et automotive sont sensés être compatibles sur ios
 				'stationary': location['activity']['type'] == 'still',
-				'confidence': location["activity"]['confidence'],
+				'confidence': location['activity']['confidence'],
 				'fmt_time': location['timestamp'],
 				'ts': ts + 0.2,
 				'confidence_level': 'high',
@@ -255,7 +241,7 @@ function TranslateToEMissionRequest(locations, user) {
 	// Clipboard.setString(JSON.stringify(locations));
 	for (let translationIndex = 0; translationIndex < locations.length; translationIndex++) {
 		if (locations[translationIndex]['error'] == undefined) { //Si le points n'est pas {'error': 0}
-			//console.log("location", translationIndex, "of", locations.length);
+			//console.log('location', translationIndex, 'of', locations.length);
 			const point = locations[translationIndex];
 			let ts = parseISOString(point['timestamp']);
 			let newLocationPoint = TranslateToEMissionLocationPoint(point, ts);
@@ -282,62 +268,51 @@ function TranslateToEMissionRequest(locations, user) {
 	return output;
 }
 
-export async function UpdateToken() {
-	try {
-		let newId = await _getId();
-		console.log('Generating token for:', newId);
+export async function UpdateId(newId) { // If there are still non-uploaded locations, it should be handled before changing the Id or they will be sent with the new one
+	console.log('Updating Id to', newId);
 
-		let newToken = await GenerateToken(newId);
-
-		if (newToken != undefined) {
-			await _storeToken(newToken);
-			console.log('Token updated');
-
-		} else {
-			// Typiquement si pas de connexion, l'ancien token/uuid a été supprimé donc sera réessayé
-			console.log('Token couldnt be updated right now');
-		}
-	} catch (error) {
-		console.log('WTF error, problème d écriture/lecture du stockage ?', error);
-	}
-}
-
-export async function UpdateId(newId) {
 	if (newId.length > 2 && newId != await _getId()) {
-		await AsyncStorage.multiRemove(['Id', 'Token']); // Pour l'instant, ne remove pas les locations etc
 		await _storeId(newId);
-		return ('Id updated, token deleted');
+		if (newId != await _getId()) {
+			return ('FAIL_STORING_ID')
+		}
+		try {
+			await CreateUser(newId);
+			return ('SUCCESS_STORING_SUCCESS_CREATING');
+		} catch (error) {
+			return ('SUCCESS_STORING_FAIL_CREATING');
+		}
 	} else {
-		return ('Same Id or invalid Id');
+		return ('SAME_ID_OR_INVALID_ID');
 	}
 }
 
 
 function Transition(state, transition, transition_ts) {
 	return ({
-		"data": {
+		'data': {
 
-			"currState": state,
-			"transition": transition,
-			"ts": transition_ts
+			'currState': state,
+			'transition': transition,
+			'ts': transition_ts
 
 		},
-		"metadata": {
-			"platform": Platform.OS,
-			"write_ts": transition_ts,
-			"time_zone": "UTC",
-			"key": "statemachine/transition",
-			"read_ts": 0,
-			"type": "message"
+		'metadata': {
+			'platform': Platform.OS,
+			'write_ts': transition_ts,
+			'time_zone': 'UTC',
+			'key': 'statemachine/transition',
+			'read_ts': 0,
+			'type': 'message'
 		}
 	});
 }
 
 function AddStartTransitions(list, ts) {
-	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_EXITED_GEOFENCE", ts + 0.1));
-	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_TRIP_STARTED", ts + 0.2));
-	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_VISIT_ENDED", ts + 0.3));
-	list.push(Transition("STATE_ONGOING_TRIP", "T_TRIP_STARTED", ts + 0.4));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.1));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.2));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_VISIT_ENDED', ts + 0.3));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.4));
 }
 
 function AddStopTransitions(list, ts, last_location) {
@@ -347,39 +322,42 @@ function AddStopTransitions(list, ts, last_location) {
 		list.at(-1)['metadata']['write_ts'] = ts;
 		// No filtered_location, does not seem necessary
 	}
-	list.push(Transition("STATE_ONGOING_TRIP", "T_TRIP_END_DETECTED", ts + 0.1));
-	list.push(Transition("STATE_ONGOING_TRIP", "T_END_TRIP_TRACKING", ts + 0.2));
-	list.push(Transition("STATE_ONGOING_TRIP", "T_TRIP_ENDED", ts + 0.3));
-	list.push(Transition("STATE_ONGOING_TRIP", "T_FORCE_STOP_TRACKING", ts + 0.4));
-	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_FORCE_STOP_TRACKING", ts + 0.5));
-	list.push(Transition("STATE_WAITING_FOR_TRIP_START", "T_NOP", ts + 0.6));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.1));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_END_TRIP_TRACKING', ts + 0.2));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_ENDED', ts + 0.3));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_FORCE_STOP_TRACKING', ts + 0.4));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_FORCE_STOP_TRACKING', ts + 0.5));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.6));
 }
 
-async function SmartSend(locations, user, force = false, copyToClipboardSentData = false) {
+export async function SmartSend(locations, user, force = false, copyToClipboardSentData = false) {
 	if (force) {
-		//Si on force l'upload, marquer un arrêt maintenant
+		//If the upload was forced, we want to force a stop now (means that we should try to make every point available to the server)
 		await RegisterStopNow();
 	}
+
+	CreateUser(user); // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
+
 	let stops = await _getStops();
-	// console.log("Stops:", JSON.stringify(stops));
+	// console.log('Stops:', JSON.stringify(stops));
 
 	if (stops.length > 0 && locations.length > 0) {
 		let lastStop = stops.at(-1);
-		console.log("Uploading up to:", lastStop);
+		console.log('Uploading up to:', lastStop);
 		let phone_to_server = [[]];
 		let phone_to_serverIndex = 0;
 		let index = 0;
 
-		AddStartTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) - 1);
+		AddStartTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]['timestamp']).getTime() / 1000) - 1);
 
-		while (index < locations.length && Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) <= lastStop) {
+		while (index < locations.length && Math.floor(parseISOString(locations[index]['timestamp']).getTime() / 1000) <= lastStop) {
 
 			phone_to_server[phone_to_serverIndex].push(TranslateToEMissionLocationPoint(locations[index]));
 			//Condition de filtered_location:
 			if (locations[index]['coords']['accuracy'] <= 200) { // Précision suffisante
 				if (index == 0 || (locations[index]['coords']['longitude'] != locations[index - 1]['coords']['longitude'] || locations[index]['coords']['latitude'] != locations[index - 1]['coords']['latitude'])) { // Différent du point précédent (check si on est au premier))
 					phone_to_server[phone_to_serverIndex].push(TranslateToEMissionLocationPoint(locations[index]));
-					phone_to_server[phone_to_serverIndex].at(-1)["metadata"]["key"] = "background/filtered_location";
+					phone_to_server[phone_to_serverIndex].at(-1)['metadata']['key'] = 'background/filtered_location';
 				}
 			}
 
@@ -387,12 +365,12 @@ async function SmartSend(locations, user, force = false, copyToClipboardSentData
 
 
 			if (index == locations.length - 1) {
-				AddStopTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) + 60);
+				AddStopTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]['timestamp']).getTime() / 1000) + 60);
 			}
-			else if (Math.floor(parseISOString(locations[index + 1]["timestamp"]).getTime() / 1000) - Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) > 500) {
+			else if (Math.floor(parseISOString(locations[index + 1]['timestamp']).getTime() / 1000) - Math.floor(parseISOString(locations[index]['timestamp']).getTime() / 1000) > 500) {
 
-				AddStopTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]["timestamp"]).getTime() / 1000) + 60);
-				AddStartTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index + 1]["timestamp"]).getTime() / 1000) - 1);
+				AddStopTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index]['timestamp']).getTime() / 1000) + 60);
+				AddStartTransitions(phone_to_server[phone_to_serverIndex], Math.floor(parseISOString(locations[index + 1]['timestamp']).getTime() / 1000) - 1);
 				// In theory, according to the if statement, the start will always be after the end
 
 			}
@@ -425,7 +403,7 @@ async function SmartSend(locations, user, force = false, copyToClipboardSentData
 
 			allRequests += JSON.stringify(JsonRequest);
 			if (batchIndex == phone_to_server.length - 1) {
-				allRequests += "Stops: " + JSON.stringify(await _getStops());
+				allRequests += 'Stops: ' + JSON.stringify(await _getStops());
 			}
 
 			if (!response.ok) {
@@ -446,7 +424,7 @@ async function SmartSend(locations, user, force = false, copyToClipboardSentData
 			}
 		}
 		Clipboard.setString(allRequests);
-	} else { console.log("Pas de stops et non forcé ou pas de points; pas d'upload"); }
+	} else { console.log('No stops and not forced or no points: no upload'); }
 
 	//TODO : nettoyer les stops de la mémoire solide
 
@@ -495,7 +473,7 @@ async function SmartSend(locations, user, force = false, copyToClipboardSentData
 					}
 				}
 			}
-			AsyncStorage.removeItem('stops');
+			AsyncStorage.removeItem(StopsStorageAdress);
 		} else {
 			console.log('No stops detected');
 		}
@@ -503,7 +481,7 @@ async function SmartSend(locations, user, force = false, copyToClipboardSentData
 
 }
 
-export async function UploadData(force = false) { // WARNING: le message qui prévient le user que l'upload a fail se base sur le fait qu'il reste des locations localement ou non
+export async function UploadData(force = false, retryOnFail = true) { // WARNING: le message qui prévient le user que l'upload a fail se base sur le fait qu'il reste des locations localement ou non
 
 	console.log('Starting upload process');
 
@@ -513,39 +491,32 @@ export async function UploadData(force = false) { // WARNING: le message qui pr�
 			// console.log(locations);
 
 			let user = await _getId();
-			let token = await _getToken();
 			console.log('Using Id:', user);
-			if (token == null) {
-				console.log('No token, getting one...');
-				await UpdateToken();
-				console.log('done');
-				token = await _getToken();
-			}
 
-			if (token != null) {
-				console.log('Got token:', token);
-				try {
-					await SmartSend(locations, user, force);
-				} catch (message) {
-					console.log('Error trying to send data:', message);
+			try {
+				await SmartSend(locations, user, force);
+			} catch (message) {
+				console.log('Error trying to send data:', message);
+				if (retryOnFail) {
 					if (!(await _getFlagFailUpload())) {
+
 						console.log('First fail, trying again in', retryOnFailTime);
 						_storeFlagFailUpload(true);
+
 						setTimeout(async () => {
+
 							if (await _getFlagFailUpload()) { // On vérifie que l'upload n'a pas marché depuis
 								console.log('Second attempt at uploading (fail', retryOnFailTime, 'ago)');
 								try {
 									await UploadData();
 								} catch { console.log('Failed again'); }
-							} else {
-								console.log('Cancelling second attempt, succeeded since');
-							}
+							} else { console.log('Cancelling second attempt, succeeded since'); }
+
 						}, retryOnFailTime)
 					} else { console.log('Already failed twice, no more attempt until event'); }
 				}
-			} else {
-				console.log('No token after trying to update it: cancelling upload');
 			}
+
 		} else {
 			console.log('No locations to upload');
 		}
@@ -559,11 +530,11 @@ export function GeolocationSwitch() {
 	const [enabled, setEnabled] = React.useState(false);
 	const [location, setLocation] = React.useState('');
 
-	AsyncStorage.getItem('should_be_tracking').then((shouldBeTracking) => {
+	AsyncStorage.getItem(ShouldBeTrackingFlagStorageAdress).then((shouldBeTracking) => {
 		// Aparemment se déclenche plus souvent que je voudrais, mais pas critique
 		// console.log(shouldBeTracking)
 		if (shouldBeTracking == undefined) {
-			AsyncStorage.setItem('should_be_tracking',
+			AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress,
 				enabled ? 'true' : 'false');
 		} else {
 			setEnabled(shouldBeTracking == 'true');
@@ -584,10 +555,10 @@ export function GeolocationSwitch() {
 			if (!event.isMoving) {
 				await RegisterStopNow();
 				if (await _getAutoUploadFlag()) {
-					console.log("Auto uploading");
+					console.log('Auto uploading');
 					UploadData();
 				} else {
-					console.log("Not auto uploading");
+					console.log('Not auto uploading');
 				}
 			}
 
@@ -668,7 +639,7 @@ export function GeolocationSwitch() {
 			}}>Tracking</Text>
 			<Switch value={enabled} onValueChange={(value) => {
 				setEnabled(value);
-				AsyncStorage.setItem('should_be_tracking', value ? 'true' : 'false');
+				AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, value ? 'true' : 'false');
 			}} />
 
 		</View>
