@@ -28,6 +28,7 @@ const serverURL = 'https://openpath.cozycloud.cc';
 const batch_size = 1000;
 const useUniqueDeviceID = false;
 const autoUploadDefault = true;
+const useGeofencesOnAndroid = true;
 
 // Storage adresses used by AsyncStorage
 // Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
@@ -183,7 +184,7 @@ function TranslateToEMissionLocationPoint(location_point) {
 			'accuracy': location_point['coords']['accuracy'],
 			'altitude': location_point['coords']['altitude'],
 			'bearing': location_point['coords']['heading'],
-			'filter': Platform.OS === 'ios' ? 'distance' : 'distance',
+			'filter': (Platform.OS === 'ios' || useGeofencesOnAndroid) ? 'distance' : 'time',
 			'floor': 0,
 			'fmt_time': location_point['timestamp'],
 			'latitude': location_point['coords']['latitude'],
@@ -587,7 +588,8 @@ export function GeolocationSwitch() {
 			// Geolocation Config
 			desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
 			showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
-			distanceFilter: 10,
+			distanceFilter: (Platform.OS === 'ios' || useGeofencesOnAndroid) ? 10 : 0,
+			locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
 			stationaryRadius: 25, //Minimum, but still usually takes 200m
 			// Activity Recognition
 			stopTimeout: stopTimeoutMin,
