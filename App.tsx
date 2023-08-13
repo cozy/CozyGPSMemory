@@ -118,19 +118,19 @@ function App(): JSX.Element {
     switch (result) {
 
       case 'SUCCESS_STORING_SUCCESS_CREATING':
-        MakePopup('✅ ID successfully updated');
+        MakePopup('✅ Id successfully updated');
         break;
 
       case 'SUCCESS_STORING_FAIL_CREATING':
-        MakePopup('🛜 Couldn\'t create ID on the Openpath server, but it will be done before the next upload');
+        MakePopup('🛜 Couldn\'t create Id on the Openpath server, but it will be done before the next upload');
         break;
 
       case 'SAME_ID_OR_INVALID_ID':
-        MakePopup('❌ Same ID or invalid ID');
+        MakePopup('❌ Same Id or invalid Id');
         break;
 
       default:
-        MakePopup('❌ Unexpected error updating the user ID')
+        MakePopup('❌ Unexpected error updating the user Id')
         break;
     }
   }

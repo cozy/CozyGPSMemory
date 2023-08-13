@@ -26,15 +26,15 @@ const stopTimeoutDetectionMill = 0.8 * stopTimeoutMin * 60 * 1000; // Réduit po
 const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
 const batch_size = 1000;
-const useUniqueDeviceID = false;
+const useUniqueDeviceId = false;
 const autoUploadDefault = true;
 const useGeofencesOnAndroid = true;
 
 // Storage adresses used by AsyncStorage
 // Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
-// Old adresses: ['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']
+const OldStorageAdresses = ['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops', 'CozyGPSMemory.ID'];
 
-const IDStorageAdress = 'CozyGPSMemory.ID';
+const IdStorageAdress = 'CozyGPSMemory.Id';
 const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
 const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
 const StopsStorageAdress = 'CozyGPSMemory.Stops';
@@ -89,7 +89,7 @@ async function _getFlagFailUpload() {
 
 export async function _storeId(Id) {
 	try {
-		await AsyncStorage.setItem(IDStorageAdress, Id);
+		await AsyncStorage.setItem(IdStorageAdress, Id);
 	} catch (error) {
 		throw (error);
 	}
@@ -97,20 +97,20 @@ export async function _storeId(Id) {
 
 export async function _getId() {
 	try {
-		let value = await AsyncStorage.getItem(IDStorageAdress);
+		let value = await AsyncStorage.getItem(IdStorageAdress);
 		if (value == undefined) {
-			console.log("No current ID, generating a new one...");
-			value = useUniqueDeviceID ? await getUniqueId() : Math.random().toString(36).replace('0.', '');
-			await _storeId(value); // random ID or device ID depending on config
+			console.log("No current Id, generating a new one...");
+			value = useUniqueDeviceId ? await getUniqueId() : Math.random().toString(36).replace('0.', '');
+			await _storeId(value); // random Id or device Id depending on config
 		}
-		if (value != await AsyncStorage.getItem(IDStorageAdress)) {
-			throw new Error('New ID couldn\'t be stored'); // We make sure it is stored
+		if (value != await AsyncStorage.getItem(IdStorageAdress)) {
+			throw new Error('New Id couldn\'t be stored'); // We make sure it is stored
 		} else {
-			console.log("Found ID:", value);
+			console.log("Found Id:", value);
 			return value;
 		}
 	} catch (error) {
-		console.log('Error while getting ID:', error);
+		console.log('Error while getting Id:', error);
 		throw (error);
 	}
 };
@@ -142,11 +142,14 @@ export async function _getStops() {
 
 export async function ClearAllCozyGPSMemoryData() {
 	await BackgroundGeolocation.destroyLocations();
-	await AsyncStorage.multiRemove([IDStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, StopsStorageAdress, AutoUploadFlagStorageAdress]);
-	await AsyncStorage.multiRemove(['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']); // Just to clean up devices upgrading from older builds since variable names were updated
+	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, StopsStorageAdress, AutoUploadFlagStorageAdress]);
+	await ClearOldCozyGPSMemoryStorage();
 	console.log('Everything cleared');
 }
 
+export async function ClearOldCozyGPSMemoryStorage() {
+	await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since variable names were updated
+}
 async function CreateUser(user) {
 	let response = await fetch(serverURL + '/profile/create', {
 		method: 'POST',
