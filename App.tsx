@@ -149,6 +149,12 @@ function App(): JSX.Element {
           <GeolocationSwitch></GeolocationSwitch>
 
           <Button
+            onPress={() => { ForceUploadMobility(); }}
+            title='Upload pending tracks to E-Mission'
+            disabled={!devMode}
+          />
+
+          <Button
             onPress={async function () {
               let idToCopy = await _getId();
               if (idToCopy == undefined) {
@@ -157,12 +163,6 @@ function App(): JSX.Element {
               Clipboard.setString(idToCopy);
             }}
             title='Copy secret Tracker Id (for konnector)'
-          />
-
-          <Button
-            onPress={() => { ForceUploadMobility(); }}
-            title='Force upload pending tracks to E-Mission'
-            disabled={!devMode}
           />
 
           <Button
