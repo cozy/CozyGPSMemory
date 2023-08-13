@@ -337,7 +337,7 @@ export async function SmartSend(locations, user, force = false, copyToClipboardS
 		await RegisterStopNow();
 	}
 
-	CreateUser(user); // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
+	await CreateUser(user); // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
 
 	let stops = await _getStops();
 	// console.log('Stops:', JSON.stringify(stops));
