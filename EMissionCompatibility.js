@@ -32,7 +32,7 @@ const useGeofencesOnAndroid = true;
 
 // Storage adresses used by AsyncStorage
 // Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
-// Old adresses: ['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']
+const OldStorageAdresses = ['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops', 'CozyGPSMemory.ID'];
 
 const IdStorageAdress = 'CozyGPSMemory.Id';
 const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
@@ -143,10 +143,13 @@ export async function _getStops() {
 export async function ClearAllCozyGPSMemoryData() {
 	await BackgroundGeolocation.destroyLocations();
 	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, StopsStorageAdress, AutoUploadFlagStorageAdress]);
-	await AsyncStorage.multiRemove(['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops']); // Just to clean up devices upgrading from older builds since variable names were updated
+	await ClearOldCozyGPSMemoryStorage();
 	console.log('Everything cleared');
 }
 
+export async function ClearOldCozyGPSMemoryStorage() {
+	await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since variable names were updated
+}
 async function CreateUser(user) {
 	let response = await fetch(serverURL + '/profile/create', {
 		method: 'POST',
