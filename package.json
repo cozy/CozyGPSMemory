@@ -7,7 +7,8 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "build:android:debug": "./scripts/build-debug-offline-apk.sh"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.19.1",
