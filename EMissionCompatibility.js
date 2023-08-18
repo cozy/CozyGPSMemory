@@ -33,6 +33,7 @@ const autoUploadDefault = true;
 const useGeofencesOnAndroid = true;
 const saveGeneralLog = true;
 const saveUploadLog = true;
+const detectMotionActivity = true;
 
 // Storage adresses used by AsyncStorage
 // Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
@@ -214,18 +215,23 @@ function TranslateToEMissionLocationPoint(location_point) {
 
 function TranslateToEMissionMotionActivityPoint(location) {
 	let ts = Math.floor(parseISOString(location['timestamp']).getTime() / 1000);
+	CozyGPSMemoryLog('Activity linked to point: ' + location['activity']['type']); // Pour demeler un peu tout ça (temporaire)
 	return {
 
 		'data': {
 			'cycling': location['activity']['type'] == 'on_bicycle',
-			'walking': location['activity']['type'] == 'on_foot',
+			'walking': location['activity']['type'] == 'walking' || location['activity']['type'] == 'on_foot', // A voir
 			'running': location['activity']['type'] == 'running',
 			'automotive': location['activity']['type'] == 'in_vehicle', // Stationary et automotive sont sensés être compatibles sur ios
 			'stationary': location['activity']['type'] == 'still',
-			'unknown': false, // Not sure what to do in this case, it doesn't really exist in the plugin (what happens w/o OS permission?)
+			'unknown': location['activity']['type'] == 'unknown',
 			'confidence': location['activity']['confidence'],
 			'ts': ts + 0.2,
-			'confidence_level': location['activity']['confidence'] > 50 ? 'high' : 'low' // To be improved
+			'confidence_level': location['activity']['confidence'] >= 75 ?
+				'high' :
+				location['activity']['confidence'] >= 50 ?
+					'medium' :
+					'low'
 		},
 		'metadata': {
 			'write_ts': ts + 0.2,
@@ -385,6 +391,8 @@ function AddPoint(addedTo, point, filtered) {
 		addedTo.push(TranslateToEMissionLocationPoint(point));
 		addedTo.at(-1)['metadata']['key'] = 'background/filtered_location';
 	}
+
+	if (detectMotionActivity) { addedTo.push(TranslateToEMissionMotionActivityPoint(point)); }
 
 }
 
