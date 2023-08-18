@@ -327,26 +327,22 @@ function Transition(state, transition, transition_ts) {
 	});
 }
 
+// Add start transitions, within 0.1s of given ts
 function AddStartTransitions(list, ts) {
-	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.1));
-	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.2));
-	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_VISIT_ENDED', ts + 0.3));
-	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.4));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.02));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.03));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_RESTARTED', ts + 0.04));
 }
 
-function AddStopTransitions(list, ts, last_location) {
-	if (last_location != undefined) {
-		list.push(TranslateToEMissionLocationPoint(last_location));
-		list.at(-1)['data']['ts'] = ts;
-		list.at(-1)['metadata']['write_ts'] = ts;
-		// No filtered_location, does not seem necessary
-	}
-	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.1));
-	list.push(Transition('STATE_ONGOING_TRIP', 'T_END_TRIP_TRACKING', ts + 0.2));
-	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_ENDED', ts + 0.3));
-	list.push(Transition('STATE_ONGOING_TRIP', 'T_FORCE_STOP_TRACKING', ts + 0.4));
-	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_FORCE_STOP_TRACKING', ts + 0.5));
-	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.6));
+// Add stop transitions, within 0.1s of given ts
+function AddStopTransitions(list, ts) {
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.02));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_END_TRIP_TRACKING', ts + 0.03));
+	list.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_ENDED', ts + 0.04));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.05));
+	list.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.06));
 }
 
 export async function SmartSend(locations, user, force = false, copyToClipboardSentData = false) {
