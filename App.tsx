@@ -161,7 +161,7 @@ function App(): JSX.Element {
 
           <Button
             onPress={async () => { Clipboard.setString(await _getLog() || '') }}
-            title='Copy log'
+            title='Copy logs'
             disabled={!devMode}
           />
 
