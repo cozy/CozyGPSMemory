@@ -99,14 +99,14 @@ export async function _getId() {
 	try {
 		let value = await AsyncStorage.getItem(IdStorageAdress);
 		if (value == undefined) {
-			console.log("No current Id, generating a new one...");
+			console.log('No current Id, generating a new one...');
 			value = useUniqueDeviceId ? await getUniqueId() : Math.random().toString(36).replace('0.', '');
 			await _storeId(value); // random Id or device Id depending on config
 		}
 		if (value != await AsyncStorage.getItem(IdStorageAdress)) {
 			throw new Error('New Id couldn\'t be stored'); // We make sure it is stored
 		} else {
-			console.log("Found Id:", value);
+			console.log('Found Id:', value);
 			return value;
 		}
 	} catch (error) {
@@ -189,7 +189,6 @@ function TranslateToEMissionLocationPoint(location_point) {
 			'bearing': location_point['coords']['heading'],
 			'filter': (Platform.OS === 'ios' || useGeofencesOnAndroid) ? 'distance' : 'time',
 			'floor': 0,
-			'fmt_time': location_point['timestamp'],
 			'latitude': location_point['coords']['latitude'],
 			'longitude': location_point['coords']['longitude'],
 			'sensed_speed': location_point['coords']['speed'],
@@ -210,30 +209,28 @@ function TranslateToEMissionLocationPoint(location_point) {
 
 function TranslateToEMissionMotionActivityPoint(location) {
 	let ts = Math.floor(parseISOString(location['timestamp']).getTime() / 1000);
-	if (Platform.OS === 'ios') {
-		return {
+	return {
 
-			'data': {
-				'cycling': location['activity']['type'] == 'on_bicycle',
-				'walking': location['activity']['type'] == 'on_foot',
-				'running': location['activity']['type'] == 'running',
-				'automotive': location['activity']['type'] == 'in_vehicle', // Stationary et automotive sont sensés être compatibles sur ios
-				'stationary': location['activity']['type'] == 'still',
-				'confidence': location['activity']['confidence'],
-				'fmt_time': location['timestamp'],
-				'ts': ts + 0.2,
-				'confidence_level': 'high',
-			},
-			'metadata': {
-				'write_ts': ts + 0.2,
-				'time_zone': 'UTC',
-				'platform': 'ios',
-				'key': 'background/motion_activity',
-				'read_ts': 0,
-				'type': 'sensor-data'
-			}
-		};
-	}
+		'data': {
+			'cycling': location['activity']['type'] == 'on_bicycle',
+			'walking': location['activity']['type'] == 'on_foot',
+			'running': location['activity']['type'] == 'running',
+			'automotive': location['activity']['type'] == 'in_vehicle', // Stationary et automotive sont sensés être compatibles sur ios
+			'stationary': location['activity']['type'] == 'still',
+			'unknown': false, // Not sure what to do in this case, it doesn't really exist in the plugin (what happens w/o OS permission?)
+			'confidence': location['activity']['confidence'],
+			'ts': ts + 0.2,
+			'confidence_level': location['activity']['confidence'] > 50 ? 'high' : 'low' // To be improved
+		},
+		'metadata': {
+			'write_ts': ts + 0.2,
+			'time_zone': 'UTC',
+			'platform': Platform.OS,
+			'key': 'background/motion_activity',
+			'read_ts': 0,
+			'type': 'sensor-data'
+		}
+	};
 }
 
 
