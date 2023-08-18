@@ -39,7 +39,25 @@ const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
 const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
 const StopsStorageAdress = 'CozyGPSMemory.Stops';
 const AutoUploadFlagStorageAdress = 'CozyGPSMemory.AutoUploadFlag';
+const UploadHistoryAdress = 'CozyGPSMemory.UploadHistory';
 
+
+async function _getUploadHistory() {
+	return await AsyncStorage.getItem(UploadHistoryAdress);
+}
+
+async function _AddUploadToHistory(content) {
+	history = await _getUploadHistory();
+	if (history === undefined) {
+		history = '';
+	}
+	history += content;
+	AsyncStorage.setItem(UploadHistoryAdress);
+}
+
+async function _ClearUploadHistory() {
+	AsyncStorage.removeItem(UploadHistoryAdress);
+}
 
 async function _storeAutoUploadFlag(Flag) {
 	try {
@@ -142,7 +160,7 @@ export async function _getStops() {
 
 export async function ClearAllCozyGPSMemoryData() {
 	await BackgroundGeolocation.destroyLocations();
-	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, StopsStorageAdress, AutoUploadFlagStorageAdress]);
+	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, StopsStorageAdress, AutoUploadFlagStorageAdress, UploadHistoryAdress]);
 	await ClearOldCozyGPSMemoryStorage();
 	console.log('Everything cleared');
 }
