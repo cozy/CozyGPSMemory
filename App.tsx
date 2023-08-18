@@ -50,7 +50,7 @@ import BackgroundGeolocation, {
   Subscription
 } from 'react-native-background-geolocation';
 
-import { UploadData, _getId, ClearAllCozyGPSMemoryData, UpdateId, GeolocationSwitch } from './EMissionCompatibility.js'
+import { UploadData, _getId, ClearAllCozyGPSMemoryData, UpdateId, GeolocationSwitch, _getLog } from './EMissionCompatibility.js'
 
 const devMode = true;
 
@@ -157,6 +157,12 @@ function App(): JSX.Element {
               Clipboard.setString(idToCopy);
             }}
             title='Copy secret Tracker Id (for konnector)'
+          />
+
+          <Button
+            onPress={async () => { Clipboard.setString(await _getLog() || '') }}
+            title='Copy log'
+            disabled={!devMode}
           />
 
           <Button
