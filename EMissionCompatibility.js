@@ -26,8 +26,7 @@ const stopTimeout = 300; // Shouldn't have longer breaks without siginificant mo
 const longStopTimeout = 530;
 const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
-const batch_size = 1000; // old
-const maxPointsPerBatch = 100;
+const maxPointsPerBatch = 100; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
 const autoUploadDefault = true;
 const useGeofencesOnAndroid = true;
@@ -227,9 +226,9 @@ function TranslateToEMissionMotionActivityPoint(location) {
 			'unknown': location['activity']['type'] == 'unknown',
 			'confidence': location['activity']['confidence'],
 			'ts': ts + 0.2,
-			'confidence_level': location['activity']['confidence'] >= 75 ?
+			'confidence_level': location['activity']['confidence'] > 75 ?
 				'high' :
-				location['activity']['confidence'] >= 50 ?
+				location['activity']['confidence'] > 50 ?
 					'medium' :
 					'low'
 		},
