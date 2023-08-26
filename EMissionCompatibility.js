@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackgroundGeolocation from 'react-native-background-geolocation';
 import { Platform } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
 import React, { useState } from 'react';
 import { getUniqueId } from 'react-native-device-info';
 
@@ -20,18 +19,19 @@ import {
 	View,
 } from 'react-native';
 
+const versionIterationCounter = 1; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
 const DestroyLocalOnSuccess = true;
 const stopTimeoutMin = 11;
 const stopTimeout = 300; // Shouldn't have longer breaks without siginificant movement
 const longStopTimeout = 530;
 const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
-const maxPointsPerBatch = 100; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
+const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
 const autoUploadDefault = true;
 const useGeofencesOnAndroid = true;
-const saveGeneralLog = true;
-const saveUploadLog = true;
+const heavyLogs = false; // Log points, motion changes...
+const maxLogSize = 100000; // In characters
 const detectMotionActivity = true;
 
 // Storage adresses used by AsyncStorage
@@ -44,14 +44,24 @@ const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
 const AutoUploadFlagStorageAdress = 'CozyGPSMemory.AutoUploadFlag';
 const LogAdress = 'CozyGPSMemory.Log';
 const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded';
+const versionIterationCounterStorageAdress = 'CozyGPSMemory.VersionIterationCounter';
 
+
+async function _updateVersionIterationCounter() {
+	await AsyncStorage.setItem(versionIterationCounterStorageAdress, versionIterationCounter.toString());
+	CozyGPSMemoryLog('Set versionIterationCounter to: ' + versionIterationCounter)
+}
+
+async function _getVersionIterationCounter() {
+	return parseInt(await AsyncStorage.getItem(versionIterationCounterStorageAdress) | '0');
+}
 
 async function _getLastPointUploaded() {
 	return JSON.parse(await AsyncStorage.getItem(LastPointUploadedAdress));
 }
 
 async function _setLastPointUploaded(value) {
-	AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value));
+	await AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value));
 }
 
 export async function _getLog() {
@@ -60,22 +70,20 @@ export async function _getLog() {
 
 async function _addToLog(content) {
 	history = await _getLog();
-	if (history === undefined) {
+	if (history === undefined || history === null) {
 		history = '';
 	}
-	history += '\n' + Date.now() + ' | ' + content;
-	await AsyncStorage.setItem(LogAdress, history);
+	history += Date.now() + ' | ' + content + '\n';
+	await AsyncStorage.setItem(LogAdress, history.slice(-maxLogSize));
 }
 
 async function CozyGPSMemoryLog(message) {
 	console.log(message);
-	if (saveGeneralLog) {
-		await _addToLog(message);
-	}
+	await _addToLog(message);
 }
 
 async function _ClearLog() {
-	AsyncStorage.removeItem(LogAdress);
+	await AsyncStorage.removeItem(LogAdress);
 }
 
 async function _storeAutoUploadFlag(Flag) {
@@ -92,7 +100,7 @@ async function _getAutoUploadFlag() {
 		let value = await AsyncStorage.getItem(AutoUploadFlagStorageAdress);
 		if (value == undefined) {
 			value = autoUploadDefault;
-			_storeAutoUploadFlag(value);
+			await _storeAutoUploadFlag(value);
 		}
 		return !(value == 'false'); // Si undefined malgré tout on considère erreur
 	} catch (error) {
@@ -115,7 +123,7 @@ async function _getFlagFailUpload() {
 		let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress);
 		if (value == undefined) {
 			value = false;
-			_storeFlagFailUpload(value);
+			await _storeFlagFailUpload(value);
 		}
 		return !(value == 'false'); // Si undefined malgré tout on considère erreur
 	} catch (error) {
@@ -139,13 +147,14 @@ export async function _getId() {
 			CozyGPSMemoryLog('No current Id, generating a new one...');
 			value = useUniqueDeviceId ? await getUniqueId() : Math.random().toString(36).replace('0.', '');
 			await _storeId(value); // random Id or device Id depending on config
+			if (value != await AsyncStorage.getItem(IdStorageAdress)) {
+				throw new Error('New Id couldn\'t be stored'); // We make sure it is stored
+			}
+			CozyGPSMemoryLog('Set Id to: ' + value)
 		}
-		if (value != await AsyncStorage.getItem(IdStorageAdress)) {
-			throw new Error('New Id couldn\'t be stored'); // We make sure it is stored
-		} else {
-			CozyGPSMemoryLog('Found Id: ' + value);
-			return value;
-		}
+
+		return value;
+
 	} catch (error) {
 		CozyGPSMemoryLog('Error while getting Id:' + error.toString());
 		throw (error);
@@ -154,13 +163,29 @@ export async function _getId() {
 
 export async function ClearAllCozyGPSMemoryData() {
 	await BackgroundGeolocation.destroyLocations();
-	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, AutoUploadFlagStorageAdress, LogAdress, LastPointUploadedAdress]);
+	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, AutoUploadFlagStorageAdress, LogAdress, LastPointUploadedAdress, versionIterationCounterStorageAdress]);
 	await ClearOldCozyGPSMemoryStorage();
 	CozyGPSMemoryLog('Everything cleared');
 }
 
 export async function ClearOldCozyGPSMemoryStorage() {
 	await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since variable names were updated
+}
+
+async function OnUpdateFrom(version) {
+	if (version < 1) {
+		await _ClearLog();
+		CozyGPSMemoryLog('Cleared logs because we may be updating from a version with logs too big to handle');
+		_updateVersionIterationCounter();
+	}
+}
+
+async function CheckForUpdateActions() {
+	lastVersion = await _getVersionIterationCounter();
+	if (lastVersion != versionIterationCounter) {
+		CozyGPSMemoryLog('Found last version: ' + lastVersion + ', current: ' + versionIterationCounter);
+		OnUpdateFrom(lastVersion);
+	}
 }
 
 async function CreateUser(user) {
@@ -214,7 +239,6 @@ function TranslateToEMissionLocationPoint(location_point) {
 
 function TranslateToEMissionMotionActivityPoint(location) {
 	let ts = Math.floor(parseISOString(location['timestamp']).getTime() / 1000);
-	CozyGPSMemoryLog('Activity linked to point: ' + location['activity']['type']); // Pour demeler un peu tout ça (temporaire)
 	return {
 
 		'data': {
@@ -320,24 +344,28 @@ async function UploadUserCache(content, user, uuidsToDeleteOnSuccess, lastPointT
 		body: JSON.stringify(JsonRequest),
 	})
 
-	if (saveUploadLog) {
-		await CozyGPSMemoryLog(JSON.stringify(JsonRequest)); // Doesn't seem to go to the saved logs, but is displayed in metro... Too big?
-	}
-
+	toLog = [JsonRequest['phone_to_server'].slice(0, 10), JsonRequest['phone_to_server'].slice(JsonRequest['phone_to_server'].length - 10, JsonRequest['phone_to_server'].length)];
+	await CozyGPSMemoryLog('Uploaded (first 10 and last 10 of upload): ' + JSON.stringify(toLog));
 
 	if (!response.ok) {
 		CozyGPSMemoryLog('Failure uploading');
 		throw new Error(String('Error in request response:', response.status, response.statusText, await response.text()));
 
 	} else {
-		if (lastPointToSave != undefined) { _setLastPointUploaded(lastPointToSave); }
-		CozyGPSMemoryLog('Success uploading, saved last point');
+		CozyGPSMemoryLog('Success uploading');
+		if (lastPointToSave != undefined) {
+			_setLastPointUploaded(lastPointToSave);
+			CozyGPSMemoryLog('Saved last point');
+		} else {
+			CozyGPSMemoryLog('No last point to save');
+		}
 		if (DestroyLocalOnSuccess && uuidsToDeleteOnSuccess.length > 0) {
-			CozyGPSMemoryLog('Destroying some local location records');
+			CozyGPSMemoryLog('Removing local location records that were just uploaded...');
 			for (let deleteIndex = 0; deleteIndex < uuidsToDeleteOnSuccess.length; deleteIndex++) {
 				const element = uuidsToDeleteOnSuccess[deleteIndex];
 				await BackgroundGeolocation.destroyLocation(element);
 			}
+			CozyGPSMemoryLog('Done removing local locations')
 		}
 	}
 }
@@ -479,7 +507,7 @@ export async function SmartSend(locations, user, force) {
 
 }
 
-export async function UploadData(force = false, retryOnFail = true) { // WARNING: le message qui prévient le user que l'upload a fail se base sur le fait qu'il reste des locations localement ou non
+export async function UploadData(force = false, retryOnFail = true) { // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
 	CozyGPSMemoryLog('Starting upload process');
 
@@ -492,6 +520,7 @@ export async function UploadData(force = false, retryOnFail = true) { // WARNING
 
 		try {
 			await SmartSend(locations, user, force);
+			return true;
 		} catch (message) {
 			CozyGPSMemoryLog('Error trying to send data: ' + message);
 			if (retryOnFail) {
@@ -505,13 +534,13 @@ export async function UploadData(force = false, retryOnFail = true) { // WARNING
 						if (await _getFlagFailUpload()) { // On vérifie que l'upload n'a pas marché depuis
 							CozyGPSMemoryLog('Second attempt at uploading');
 							try {
-								await UploadData();
-							} catch { CozyGPSMemoryLog('Failed again'); }
-						} else { CozyGPSMemoryLog('Cancelling second attempt, succeeded since'); }
+								return await UploadData();
+							} catch { CozyGPSMemoryLog('Failed again'); return false; }
+						} else { CozyGPSMemoryLog('Cancelling second attempt, succeeded since'); return true; }
 
 					}, retryOnFailTime)
-				} else { CozyGPSMemoryLog('Already failed twice, no more attempt until event'); }
-			}
+				} else { CozyGPSMemoryLog('Already failed twice, no more attempt until event'); return false; }
+			} else { return false; }
 		}
 
 
@@ -537,43 +566,57 @@ export function GeolocationSwitch() {
 	)
 
 	React.useEffect(() => {
-		/// 1.  Subscribe to events.
 
-		const onLocation = BackgroundGeolocation.onLocation((location) => {
-			CozyGPSMemoryLog('[onLocation]');
-			setLocation(JSON.stringify(location, null, 2));
+		/// Handle update effects
+		CheckForUpdateActions();
+
+		/// 1.  Subscribe to events.
+		const onEnabledChange = BackgroundGeolocation.onEnabledChange((enabled) => {
+			if (!enabled) {
+				CozyGPSMemoryLog('Turned off tracking, uploading...');
+				UploadData(false, true); // Maybe should force? Not for now, to limit unpredictable behavior
+			}
 		})
 
+		const onLocation = BackgroundGeolocation.onLocation((location) => {
+			CozyGPSMemoryLog('Location: ' + location.coords.longitude.toString() + ', ' + location.coords.latitude.toString());
+		});
+
+		const onActivityChange = BackgroundGeolocation.onActivityChange((event) => {
+			CozyGPSMemoryLog('Activity change: ' + event.activity + ' ' + event.confidence);
+		});
+
+		const onProviderChange = BackgroundGeolocation.onProviderChange((event) => {
+			CozyGPSMemoryLog('Provider change:' + JSON.stringify(event));
+		});
+
+		if (!heavyLogs) {
+			onLocation.remove();
+			onActivityChange.remove();
+			onProviderChange.remove();
+		}
+
 		const onMotionChange = BackgroundGeolocation.onMotionChange(async (event) => {
-			CozyGPSMemoryLog('[onMotionChange]' + event.toString());
+			CozyGPSMemoryLog('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
 			if (!event.isMoving) {
 				if (await _getAutoUploadFlag()) {
 					CozyGPSMemoryLog('Auto uploading');
 					UploadData();
-				} else {
-					CozyGPSMemoryLog('Not auto uploading');
 				}
 			}
 
 		});
 
-		const onActivityChange = BackgroundGeolocation.onActivityChange((event) => {
-			CozyGPSMemoryLog('[onActivityChange] ' + event.toString());
-		})
-
-		const onProviderChange = BackgroundGeolocation.onProviderChange((event) => {
-			CozyGPSMemoryLog('[onProviderChange] ' + event.toString());
-		})
 
 		const onConnectivityChange = BackgroundGeolocation.onConnectivityChange(async (event) => {
 			// ne trigger pas en emul ios, donne event = {'connected': false}
 			// à tester en réel
-			CozyGPSMemoryLog('[onConnectivityChange] ' + event.toString());
-			if (event.connected && await _getFlagFailUpload() && await _getAutoUploadFlag()) {
+			CozyGPSMemoryLog('Connectivity change to: ' + event.connected);
+			if (event.connected) {
 				CozyGPSMemoryLog('Auto uploading');
 				UploadData();
 			}
-		})
+		});
 
 		/// 2. ready the plugin.
 		BackgroundGeolocation.ready({
@@ -609,6 +652,7 @@ export function GeolocationSwitch() {
 			onActivityChange.remove();
 			onProviderChange.remove();
 			onConnectivityChange.remove();
+			onEnabledChange.remove();
 		}
 	}, []);
 

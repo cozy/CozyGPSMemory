@@ -68,14 +68,11 @@ function App(): JSX.Element {
     setIdInputPopupVisible(true);
   }
   const ForceUploadMobility = async () => {
-    await UploadData(true, false);
-    BackgroundGeolocation.getLocations().then(async (locations) => {
-      if (locations.length > 0) { // Méthode grossière, mais ça résout le problème
-        MakePopup('❌ There are still local positions');
-      } else {
-        MakePopup('✅ All mobility measures uploaded!');
-      }
-    })
+    if (await UploadData(true, false)) {
+      MakePopup('✅ All mobility measures uploaded!');
+    } else {
+      MakePopup('❌ There are still local positions');
+    }
   };
 
   const closeModal = () => {
@@ -160,7 +157,12 @@ function App(): JSX.Element {
           />
 
           <Button
-            onPress={async () => { Clipboard.setString(await _getLog() || '') }}
+            onPress={async () => {
+              console.log('Copying logs...');
+              Clipboard.setString(await _getLog() || '')
+              console.log('Done');
+
+            }}
             title='Copy logs'
             disabled={!devMode}
           />
