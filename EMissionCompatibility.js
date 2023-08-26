@@ -172,19 +172,18 @@ export async function ClearOldCozyGPSMemoryStorage() {
 	await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since variable names were updated
 }
 
-async function OnUpdateFrom(version) {
-	if (version < 1) {
-		await _ClearLog();
-		CozyGPSMemoryLog('Cleared logs because we may be updating from a version with logs too big to handle');
-		_updateVersionIterationCounter();
-	}
-}
-
 async function CheckForUpdateActions() {
+
 	lastVersion = await _getVersionIterationCounter();
 	if (lastVersion != versionIterationCounter) {
-		CozyGPSMemoryLog('Found last version: ' + lastVersion + ', current: ' + versionIterationCounter);
-		OnUpdateFrom(lastVersion);
+		await CozyGPSMemoryLog('Found last version: ' + lastVersion + ', current: ' + versionIterationCounter);
+		await ClearOldCozyGPSMemoryStorage();
+		await CozyGPSMemoryLog('Cleared old storages');
+		if (lastVersion < 1) {
+			await _ClearLog();
+			await CozyGPSMemoryLog('Cleared logs because we may be updating from a version with logs too big to handle');
+		}
+		_updateVersionIterationCounter();
 	}
 }
 
