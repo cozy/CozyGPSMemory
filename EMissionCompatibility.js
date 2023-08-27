@@ -19,7 +19,7 @@ import {
 	View,
 } from 'react-native';
 
-const versionIterationCounter = 1; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
+const currVersionIterationCounter = 2; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
 const DestroyLocalOnSuccess = true;
 const stopTimeoutMin = 11;
 const stopTimeout = 300; // Shouldn't have longer breaks without siginificant movement
@@ -48,8 +48,8 @@ const versionIterationCounterStorageAdress = 'CozyGPSMemory.VersionIterationCoun
 
 
 async function _updateVersionIterationCounter() {
-	await AsyncStorage.setItem(versionIterationCounterStorageAdress, versionIterationCounter.toString());
-	CozyGPSMemoryLog('Set versionIterationCounter to: ' + versionIterationCounter)
+	await AsyncStorage.setItem(versionIterationCounterStorageAdress, currVersionIterationCounter.toString());
+	CozyGPSMemoryLog('Set versionIterationCounter to: ' + currVersionIterationCounter)
 }
 
 async function _getVersionIterationCounter() {
@@ -175,11 +175,11 @@ export async function ClearOldCozyGPSMemoryStorage() {
 async function CheckForUpdateActions() {
 
 	lastVersion = await _getVersionIterationCounter();
-	if (lastVersion != versionIterationCounter) {
-		await CozyGPSMemoryLog('Found last version: ' + lastVersion + ', current: ' + versionIterationCounter);
+	if (lastVersion != currVersionIterationCounter) {
+		await CozyGPSMemoryLog('Found last version: ' + lastVersion + ', current: ' + currVersionIterationCounter);
 		await ClearOldCozyGPSMemoryStorage();
 		await CozyGPSMemoryLog('Cleared old storages');
-		if (lastVersion < 1) {
+		if (lastVersion < 2) {
 			await _ClearLog();
 			await CozyGPSMemoryLog('Cleared logs because we may be updating from a version with logs too big to handle');
 		}
