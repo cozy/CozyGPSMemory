@@ -342,9 +342,12 @@ async function UploadUserCache(content, user, uuidsToDeleteOnSuccess, lastPointT
 		},
 		body: JSON.stringify(JsonRequest),
 	})
-
-	toLog = [JsonRequest['phone_to_server'].slice(0, 10), JsonRequest['phone_to_server'].slice(JsonRequest['phone_to_server'].length - 10, JsonRequest['phone_to_server'].length)];
-	await CozyGPSMemoryLog('Uploaded (first 10 and last 10 of upload): ' + JSON.stringify(toLog));
+	if (heavyLogs) {
+		await CozyGPSMemoryLog('Uploaded: ' + JSON.stringify(JsonRequest));
+	} else {
+		toLog = [JsonRequest['phone_to_server'].slice(0, 10), JsonRequest['phone_to_server'].slice(JsonRequest['phone_to_server'].length - 10, JsonRequest['phone_to_server'].length)];
+		await CozyGPSMemoryLog('Uploaded (first 10 and last 10 of upload): ' + JSON.stringify(toLog));
+	}
 
 	if (!response.ok) {
 		CozyGPSMemoryLog('Failure uploading');
@@ -450,13 +453,6 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 				}
 			}
 		}
-		if (next == null || next == undefined) {
-			console.log('No following point found');
-			if (getTs(point) - Date.now() / 1000 > longStopTimeout) {
-				console.log('Last point is older than ' + longStopTimeout + ', adding stop');
-				AddStopTransitions(content, getTs(prev) + 180);
-			}
-		}
 
 		//Condition de filtered_location:
 		let samePosAsPrev = (
@@ -467,6 +463,11 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 
 		AddPoint(content, point, filtered);
 
+		if (next == null || next == undefined) {
+			if (getTs(point) - Date.now() / 1000 > longStopTimeout) {
+				AddStopTransitions(content, getTs(prev) + 180);
+			}
+		}
 	}
 
 	if (force) {
