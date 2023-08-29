@@ -68,7 +68,7 @@ function App(): JSX.Element {
     setIdInputPopupVisible(true);
   }
   const ForceUploadMobility = async () => {
-    if (await UploadData(true, false)) {
+    if (await UploadData(true)) {
       MakePopup('✅ All mobility measures uploaded!');
     } else {
       MakePopup('❌ There are still local positions');
@@ -161,7 +161,7 @@ function App(): JSX.Element {
               console.log('Copying logs...');
               Clipboard.setString(await _getLog() || '')
               console.log('Done');
-
+              MakePopup('Copied');
             }}
             title='Copy logs'
             disabled={!devMode}

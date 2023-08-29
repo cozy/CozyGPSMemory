@@ -28,7 +28,7 @@ const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
 const useGeofencesOnAndroid = true;
-const heavyLogs = false; // Log points, motion changes...
+const heavyLogs = true; // Log points, motion changes...
 const maxLogSize = 100000; // In characters
 const detectMotionActivity = true;
 
@@ -478,6 +478,7 @@ export async function SmartSend(locations, user, force) {
 
 		}
 
+		await CozyGPSMemoryLog('Uploaded last batch');
 	}
 
 }
@@ -508,133 +509,136 @@ export async function UploadData(force = false) { // WARNING: la valeur de retou
 	}
 }
 
+const onLocation = BackgroundGeolocation.onLocation(async (location) => {
+	await CozyGPSMemoryLog('(' + location.coords.longitude.toString() + ', ' + location.coords.latitude.toString() + ')');
+});
+
+/*
+const onActivityChange = BackgroundGeolocation.onActivityChange(async (event) => {
+	await CozyGPSMemoryLog('Activity change: ' + event.activity + ' ' + event.confidence);
+});
+
+const onProviderChange = BackgroundGeolocation.onProviderChange(async (event) => {
+	await CozyGPSMemoryLog('Provider change:' + JSON.stringify(event));
+});
+*/
+
+const onMotionChange = BackgroundGeolocation.onMotionChange(async (event) => {
+	await CozyGPSMemoryLog('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
+	if (!event.isMoving) {
+		await CozyGPSMemoryLog('Auto uploading from stop');
+		await UploadData();
+	}
+
+});
+
+const onConnectivityChange = BackgroundGeolocation.onConnectivityChange(async (event) => {
+	// ne trigger pas en emul ios, donne event = {'connected': false}
+	// à tester en réel
+	await CozyGPSMemoryLog('Connectivity change to: ' + event.connected);
+	if (event.connected && await _getFlagFailUpload()) {
+		await CozyGPSMemoryLog('Auto uploading from reconnection and failed last attempt');
+		await UploadData();
+	}
+});
+
+
+export async function StartTracking() {
+	try {
+
+
+		if (!((await BackgroundGeolocation.getState()).enabled)) {
+
+			await CozyGPSMemoryLog('Starting');
+
+			await BackgroundGeolocation.ready({
+				// Geolocation Config
+				desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
+				showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
+				distanceFilter: (Platform.OS === 'ios' || useGeofencesOnAndroid) ? 10 : 0,
+				locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
+				stationaryRadius: 25, //Minimum, but still usually takes 200m
+				// Activity Recognition
+				stopTimeout: stopTimeoutMin,
+				// Application config
+				debug: false, // <-- enable this hear sounds for background-geolocation life-cycle and notifications
+				logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
+				stopOnTerminate: false,   // <-- Allow the background-service to continue tracking when user closes the app. (not on iOS)
+				startOnBoot: true,        // <-- Auto start tracking when device is powered-up.
+				// HTTP / SQLite config
+
+				batchSync: false,       // <-- [Default: false] Set true to sync locations to server in a single HTTP request.
+				autoSync: false,         // <-- [Default: true] Set true to sync each location to server as it arrives.
+			});
+			await BackgroundGeolocation.start();
+
+		} else {
+			await CozyGPSMemoryLog('Already on');
+		}
+		return true;
+	} catch { return false; }
+}
+
+export async function StopTracking() {
+	try {
+
+		if ((await BackgroundGeolocation.getState()).enabled) {
+
+			await CozyGPSMemoryLog('Turned off tracking, uploading...');
+			await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
+			await BackgroundGeolocation.stop();
+
+		} else {
+			console.log('Already off');
+		}
+		return true;
+	} catch { return false; }
+}
+
 export function GeolocationSwitch() {
 	const [enabled, setEnabled] = React.useState(false);
-	const [location, setLocation] = React.useState('');
-
-	AsyncStorage.getItem(ShouldBeTrackingFlagStorageAdress).then((shouldBeTracking) => {
-		// Aparemment se déclenche plus souvent que je voudrais, mais pas critique
-		// CozyGPSMemoryLog(shouldBeTracking)
-		if (shouldBeTracking == undefined) {
-			AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress,
-				enabled ? 'true' : 'false');
+	const Toggle = () => {
+		if (!enabled) {
+			AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'true');
+			StartTracking();
 		} else {
-			setEnabled(shouldBeTracking == 'true');
+			AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+			StopTracking();
 		}
-	}
-	)
+		setEnabled(previousState => !previousState);
+	};
+
 
 	React.useEffect(() => {
+		const checkAsync = async () => {
+			const value = await AsyncStorage.getItem(ShouldBeTrackingFlagStorageAdress)
+			if (value !== undefined && value !== null) {
+				if (value == 'true') {
+					setEnabled(true);
+					StartTracking();
+				} else {
+					setEnabled(false);
+					StopTracking();
+				}
+			} else {
+				setEnabled(false);
+				StopTracking();
+				AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+			}
+		}
+		checkAsync()
 
 		/// Handle update effects
 		CheckForUpdateActions();
 
-		/// 1.  Subscribe to events.
-		const onEnabledChange = BackgroundGeolocation.onEnabledChange(async (enabled) => {
-			if (!enabled) {
-				await CozyGPSMemoryLog('Turned off tracking, uploading...');
-				await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
-			}
-		})
-
-		const onLocation = BackgroundGeolocation.onLocation((location) => {
-			CozyGPSMemoryLog('Location: ' + location.coords.longitude.toString() + ', ' + location.coords.latitude.toString());
-		});
-
-		const onActivityChange = BackgroundGeolocation.onActivityChange((event) => {
-			CozyGPSMemoryLog('Activity change: ' + event.activity + ' ' + event.confidence);
-		});
-
-		const onProviderChange = BackgroundGeolocation.onProviderChange((event) => {
-			CozyGPSMemoryLog('Provider change:' + JSON.stringify(event));
-		});
-
-		if (!heavyLogs) {
-			onLocation.remove();
-			onActivityChange.remove();
-			onProviderChange.remove();
-		}
-
-		const onMotionChange = BackgroundGeolocation.onMotionChange(async (event) => {
-			await CozyGPSMemoryLog('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
-			if (!event.isMoving) {
-				await CozyGPSMemoryLog('Auto uploading from stop');
-				await UploadData();
-			}
-
-		});
-
-
-		const onConnectivityChange = BackgroundGeolocation.onConnectivityChange(async (event) => {
-			// ne trigger pas en emul ios, donne event = {'connected': false}
-			// à tester en réel
-			await CozyGPSMemoryLog('Connectivity change to: ' + event.connected);
-			if (event.connected && await _getFlagFailUpload()) {
-				await CozyGPSMemoryLog('Auto uploading from reconnection and failed last attempt');
-				UploadData();
-			}
-		});
-
-		/// 2. ready the plugin.
-		BackgroundGeolocation.ready({
-			// Geolocation Config
-			desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-			showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
-			distanceFilter: (Platform.OS === 'ios' || useGeofencesOnAndroid) ? 10 : 0,
-			locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
-			stationaryRadius: 25, //Minimum, but still usually takes 200m
-			// Activity Recognition
-			stopTimeout: stopTimeoutMin,
-			// Application config
-			debug: false, // <-- enable this hear sounds for background-geolocation life-cycle and notifications
-			logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
-			stopOnTerminate: false,   // <-- Allow the background-service to continue tracking when user closes the app. (not on iOS)
-			startOnBoot: true,        // <-- Auto start tracking when device is powered-up.
-			// HTTP / SQLite config
-
-			batchSync: false,       // <-- [Default: false] Set true to sync locations to server in a single HTTP request.
-			autoSync: false,         // <-- [Default: true] Set true to sync each location to server as it arrives.
-		}).then((state) => {
-			setEnabled(state.enabled);
-
-			CozyGPSMemoryLog('- BackgroundGeolocation is configured and ready: ' + state.enabled);
-		});
-
-		return () => {
-			// Remove BackgroundGeolocation event-subscribers when the View is removed or refreshed
-			// during development live-reload.  Without this, event-addedToeners will accumulate with
-			// each refresh during live-reload.
-			onLocation.remove();
-			onMotionChange.remove();
-			onActivityChange.remove();
-			onProviderChange.remove();
-			onConnectivityChange.remove();
-			onEnabledChange.remove();
-		}
-	}, []);
-
-	/// 3. start / stop BackgroundGeolocation
-
-	React.useEffect(() => {
-		if (enabled) {
-			CozyGPSMemoryLog('Enabling tracking');
-			BackgroundGeolocation.start();
-		} else {
-			CozyGPSMemoryLog('Disabling tracking');
-			BackgroundGeolocation.stop();
-			setLocation('');
-		}
-	}, [enabled]);
+	}, [])
 
 	return (
 		<View style={{ alignItems: 'center', padding: 50 }}>
 			<Text style={{
 				fontSize: 36, padding: 10, color: useColorScheme() === 'dark' ? '#ffffff' : '#000000',
 			}}>Tracking</Text>
-			<Switch value={enabled} onValueChange={(value) => {
-				setEnabled(value);
-				AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, value ? 'true' : 'false');
-			}} />
+			<Switch value={enabled} onValueChange={Toggle} />
 
 		</View>
 	)
