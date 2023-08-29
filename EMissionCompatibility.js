@@ -28,7 +28,6 @@ const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
-const autoUploadDefault = true;
 const useGeofencesOnAndroid = true;
 const heavyLogs = false; // Log points, motion changes...
 const maxLogSize = 100000; // In characters
@@ -36,12 +35,11 @@ const detectMotionActivity = true;
 
 // Storage adresses used by AsyncStorage
 // Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
-const OldStorageAdresses = ['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops', 'CozyGPSMemory.ID', 'CozyGPSMemory.UploadHistory', 'CozyGPSMemory.Stops'];
+const OldStorageAdresses = ['Id', 'Token', 'FlagFailUpload', 'should_be_tracking', 'stops', 'CozyGPSMemory.ID', 'CozyGPSMemory.UploadHistory', 'CozyGPSMemory.Stops', 'CozyGPSMemory.AutoUploadFlag'];
 
 const IdStorageAdress = 'CozyGPSMemory.Id';
 const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
 const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
-const AutoUploadFlagStorageAdress = 'CozyGPSMemory.AutoUploadFlag';
 const LogAdress = 'CozyGPSMemory.Log';
 const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded';
 const versionIterationCounterStorageAdress = 'CozyGPSMemory.VersionIterationCounter';
@@ -84,29 +82,6 @@ async function CozyGPSMemoryLog(message) {
 
 async function _ClearLog() {
 	await AsyncStorage.removeItem(LogAdress);
-}
-
-async function _storeAutoUploadFlag(Flag) {
-	try {
-		await AsyncStorage.setItem(AutoUploadFlagStorageAdress, Flag ? 'true' : 'false');
-	} catch (error) {
-		await CozyGPSMemoryLog('Error while storing AutoUploadFlag:' + error.toString());
-		throw (error);
-	}
-}
-
-async function _getAutoUploadFlag() {
-	try {
-		let value = await AsyncStorage.getItem(AutoUploadFlagStorageAdress);
-		if (value == undefined) {
-			value = autoUploadDefault;
-			await _storeAutoUploadFlag(value);
-		}
-		return !(value == 'false'); // Si undefined malgré tout on considère erreur
-	} catch (error) {
-		await CozyGPSMemoryLog('Error while getting AutoUploadFlag:' + error.toString());
-		throw (error);
-	}
 }
 
 async function _storeFlagFailUpload(Flag) {
@@ -600,10 +575,8 @@ export function GeolocationSwitch() {
 		const onMotionChange = BackgroundGeolocation.onMotionChange(async (event) => {
 			await CozyGPSMemoryLog('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
 			if (!event.isMoving) {
-				if (await _getAutoUploadFlag()) {
-					await CozyGPSMemoryLog('Auto uploading');
-					UploadData();
-				}
+				await CozyGPSMemoryLog('Auto uploading');
+				await UploadData();
 			}
 
 		});
