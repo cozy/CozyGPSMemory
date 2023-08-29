@@ -509,7 +509,7 @@ export async function SmartSend(locations, user, force) {
 
 export async function UploadData(force = false, retryOnFail = true) { // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
-	await CozyGPSMemoryLog('Starting upload process');
+	await CozyGPSMemoryLog('Starting upload process' + force ? ', forced' : '' + retryOnFail ? ', retry on fail' : '');
 
 	try {
 		let locations = await BackgroundGeolocation.getLocations();
@@ -575,7 +575,7 @@ export function GeolocationSwitch() {
 		const onEnabledChange = BackgroundGeolocation.onEnabledChange(async (enabled) => {
 			if (!enabled) {
 				await CozyGPSMemoryLog('Turned off tracking, uploading...');
-				UploadData(false, true); // Maybe should force? Not for now, to limit unpredictable behavior
+				UploadData(true, true); // Forced end
 			}
 		})
 
