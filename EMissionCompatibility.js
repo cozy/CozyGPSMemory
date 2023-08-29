@@ -24,7 +24,6 @@ const DestroyLocalOnSuccess = true;
 const stopTimeoutMin = 11;
 const stopTimeout = 300; // Shouldn't have longer breaks without siginificant movement
 const longStopTimeout = 530;
-const retryOnFailTime = 15 * 60 * 1000;
 const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
@@ -97,10 +96,11 @@ async function _getFlagFailUpload() {
 	try {
 		let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress);
 		if (value == undefined) {
-			value = false;
-			await _storeFlagFailUpload(value);
+			await _storeFlagFailUpload(false);
+			return false;
+		} else {
+			return value == 'true';
 		}
-		return !(value == 'false'); // Si undefined malgré tout on considère erreur
 	} catch (error) {
 		await CozyGPSMemoryLog('Error while getting FlagFailUpload:' + error.toString());
 		throw (error);
@@ -482,9 +482,9 @@ export async function SmartSend(locations, user, force) {
 
 }
 
-export async function UploadData(force = false, retryOnFail = true) { // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
+export async function UploadData(force = false) { // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
-	await CozyGPSMemoryLog('Starting upload process' + force ? ', forced' : '' + retryOnFail ? ', retry on fail' : '');
+	await CozyGPSMemoryLog('Starting upload process' + force ? ', forced' : '');
 
 	try {
 		let locations = await BackgroundGeolocation.getLocations();
@@ -495,33 +495,16 @@ export async function UploadData(force = false, retryOnFail = true) { // WARNING
 
 		try {
 			await SmartSend(locations, user, force);
+			await _storeFlagFailUpload(false);
 			return true;
 		} catch (message) {
 			await CozyGPSMemoryLog('Error trying to send data: ' + message);
-			if (retryOnFail) {
-				if (!(await _getFlagFailUpload())) {
-
-					await CozyGPSMemoryLog('First fail, trying again in ' + retryOnFailTime);
-					_storeFlagFailUpload(true);
-
-					setTimeout(async () => {
-
-						if (await _getFlagFailUpload()) { // On vérifie que l'upload n'a pas marché depuis
-							await CozyGPSMemoryLog('Second attempt at uploading');
-							try {
-								return await UploadData();
-							} catch { await CozyGPSMemoryLog('Failed again'); return false; }
-
-						} else { CozyGPSMemoryLog('Cancelling second attempt, succeeded since'); return true; }
-
-					}, retryOnFailTime)
-				} else { CozyGPSMemoryLog('Already failed twice, no more attempt until event'); return false; }
-			} else { return false; }
+			await _storeFlagFailUpload(true);
+			return false;
 		}
 
-
 	} catch (error) {
-		throw new Error(error); //Flag et tout
+		throw new Error(error);
 	}
 }
 
@@ -550,7 +533,7 @@ export function GeolocationSwitch() {
 		const onEnabledChange = BackgroundGeolocation.onEnabledChange(async (enabled) => {
 			if (!enabled) {
 				await CozyGPSMemoryLog('Turned off tracking, uploading...');
-				UploadData(true, true); // Forced end
+				await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
 			}
 		})
 
@@ -575,7 +558,7 @@ export function GeolocationSwitch() {
 		const onMotionChange = BackgroundGeolocation.onMotionChange(async (event) => {
 			await CozyGPSMemoryLog('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
 			if (!event.isMoving) {
-				await CozyGPSMemoryLog('Auto uploading');
+				await CozyGPSMemoryLog('Auto uploading from stop');
 				await UploadData();
 			}
 
@@ -586,8 +569,8 @@ export function GeolocationSwitch() {
 			// ne trigger pas en emul ios, donne event = {'connected': false}
 			// à tester en réel
 			await CozyGPSMemoryLog('Connectivity change to: ' + event.connected);
-			if (event.connected) {
-				await CozyGPSMemoryLog('Auto uploading');
+			if (event.connected && await _getFlagFailUpload()) {
+				await CozyGPSMemoryLog('Auto uploading from reconnection and failed last attempt');
 				UploadData();
 			}
 		});
