@@ -484,7 +484,7 @@ export async function SmartSend(locations, user, force) {
 
 export async function UploadData(force = false) { // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
-	await CozyGPSMemoryLog('Starting upload process' + force ? ', forced' : '');
+	await CozyGPSMemoryLog('Starting upload process' + (force ? ', forced' : ''));
 
 	try {
 		let locations = await BackgroundGeolocation.getLocations();
