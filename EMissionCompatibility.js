@@ -28,7 +28,7 @@ const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
 const useGeofencesOnAndroid = true;
-const heavyLogs = true; // Log points, motion changes...
+const heavyLogs = false; // Log points, motion changes...
 const maxLogSize = 100000; // In characters
 const detectMotionActivity = true;
 
@@ -509,11 +509,11 @@ export async function UploadData(force = false) { // WARNING: la valeur de retou
 	}
 }
 
+/*
 const onLocation = BackgroundGeolocation.onLocation(async (location) => {
 	await CozyGPSMemoryLog('(' + location.coords.longitude.toString() + ', ' + location.coords.latitude.toString() + ')');
 });
 
-/*
 const onActivityChange = BackgroundGeolocation.onActivityChange(async (event) => {
 	await CozyGPSMemoryLog('Activity change: ' + event.activity + ' ' + event.confidence);
 });
