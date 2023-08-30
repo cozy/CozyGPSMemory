@@ -191,7 +191,7 @@ function TranslateToEMissionLocationPoint(location_point) {
 			'accuracy': location_point['coords']['accuracy'],
 			'altitude': location_point['coords']['altitude'],
 			'bearing': location_point['coords']['heading'],
-			'filter': (Platform.OS === 'ios' || useGeofencesOnAndroid) ? 'distance' : 'time',
+			'filter': 'distance',
 			'floor': 0,
 			'latitude': location_point['coords']['latitude'],
 			'longitude': location_point['coords']['longitude'],
@@ -200,7 +200,7 @@ function TranslateToEMissionLocationPoint(location_point) {
 			'vaccuracy': location_point['coords']['altitude_accuracy']
 		},
 		'metadata': {
-			'platform': Platform.OS,
+			'platform': 'ios',
 			'write_ts': ts + 0.1,
 			'time_zone': 'UTC',
 			'key': 'background/location',
@@ -233,7 +233,7 @@ function TranslateToEMissionMotionActivityPoint(location) {
 		'metadata': {
 			'write_ts': ts + 0.2,
 			'time_zone': 'UTC',
-			'platform': Platform.OS,
+			'platform': 'ios',
 			'key': 'background/motion_activity',
 			'read_ts': 0,
 			'type': 'sensor-data'
@@ -271,7 +271,7 @@ function Transition(state, transition, transition_ts) {
 
 		},
 		'metadata': {
-			'platform': Platform.OS,
+			'platform': 'ios',
 			'write_ts': transition_ts,
 			'time_zone': 'UTC',
 			'key': 'statemachine/transition',
@@ -555,7 +555,7 @@ export async function StartTracking() {
 				// Geolocation Config
 				desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
 				showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
-				distanceFilter: (Platform.OS === 'ios' || useGeofencesOnAndroid) ? 10 : 0,
+				distanceFilter: 10,
 				locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
 				stationaryRadius: 25, //Minimum, but still usually takes 200m
 				// Activity Recognition
