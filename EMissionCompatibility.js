@@ -138,7 +138,7 @@ export async function _getId() {
 
 export async function ClearAllCozyGPSMemoryData() {
 	await BackgroundGeolocation.destroyLocations();
-	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, AutoUploadFlagStorageAdress, LogAdress, LastPointUploadedAdress, versionIterationCounterStorageAdress]);
+	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, LogAdress, LastPointUploadedAdress, versionIterationCounterStorageAdress]);
 	await ClearOldCozyGPSMemoryStorage();
 	await CozyGPSMemoryLog('Everything cleared');
 }
