@@ -76,7 +76,7 @@ async function _addToLog(content) {
 	await AsyncStorage.setItem(LogAdress, history.slice(-maxLogSize));
 }
 
-async function CozyGPSMemoryLog(message) {
+export async function CozyGPSMemoryLog(message) {
 	console.log(message);
 	// await _addToLog(message);
 	Logger.debug(message);
@@ -95,7 +95,7 @@ async function _storeFlagFailUpload(Flag) {
 	}
 };
 
-async function _getFlagFailUpload() {
+export async function _getFlagFailUpload() {
 	try {
 		let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress);
 		if (value == undefined) {
@@ -470,7 +470,7 @@ export async function SmartSend(locations, user, force) {
 		await CozyGPSMemoryLog('Found pending locations, uploading them');
 		let batchCounter = 0;
 		for (let index = 0; index < locations.length; index += maxPointsPerBatch) {
-			await CozyGPSMemoryLog('Creating batch ' + (batchCounter + 1) + '/' + (locations.length / maxPointsPerBatch).toFixed(0));
+			await CozyGPSMemoryLog('Creating batch ' + (batchCounter + 1) + '/' + (1 + locations.length / maxPointsPerBatch).toFixed(0));
 			await uploadPoints(
 				locations.slice(index, index + maxPointsPerBatch),
 				user,
@@ -528,24 +528,27 @@ const onProviderChange = BackgroundGeolocation.onProviderChange(async (event) =>
 });
 */
 
-const onMotionChange = BackgroundGeolocation.onMotionChange(async (event) => {
-	await CozyGPSMemoryLog('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
-	if (!event.isMoving) {
-		await CozyGPSMemoryLog('Auto uploading from stop');
-		await UploadData();
-	}
+if (Platform.OS != 'android') { // In doubt, add the events just in case... but the app should only go to android or ios
+	const onMotionChange = BackgroundGeolocation.onMotionChange(async (event) => {
+		await CozyGPSMemoryLog('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
+		if (!event.isMoving) {
+			await CozyGPSMemoryLog('Auto uploading from stop');
+			await UploadData();
+		}
 
-});
+	});
 
-const onConnectivityChange = BackgroundGeolocation.onConnectivityChange(async (event) => {
-	// ne trigger pas en emul ios, donne event = {'connected': false}
-	// à tester en réel
-	await CozyGPSMemoryLog('Connectivity change to: ' + event.connected);
-	if (event.connected && await _getFlagFailUpload()) {
-		await CozyGPSMemoryLog('Auto uploading from reconnection and failed last attempt');
-		await UploadData();
-	}
-});
+	const onConnectivityChange = BackgroundGeolocation.onConnectivityChange(async (event) => {
+		// ne trigger pas en emul ios, donne event = {'connected': false}
+		// à tester en réel
+		await CozyGPSMemoryLog('Connectivity change to: ' + event.connected);
+		if (event.connected && await _getFlagFailUpload()) {
+			await CozyGPSMemoryLog('Auto uploading from reconnection and failed last attempt');
+			await UploadData();
+		}
+	});
+
+}
 
 
 export async function StartTracking() {
@@ -571,6 +574,8 @@ export async function StartTracking() {
 
 			batchSync: false,       // <-- [Default: false] Set true to sync locations to server in a single HTTP request.
 			autoSync: false,         // <-- [Default: true] Set true to sync each location to server as it arrives.
+			stopOnTerminate: false, // Maybe also useful for ios https://transistorsoft.github.io/react-native-background-geolocation/interfaces/config.html#stoponterminate
+			enableHeadless: true,
 		});
 		await BackgroundGeolocation.start();
 
