@@ -67,6 +67,10 @@ export async function _getLog() {
 	return await Logger.getLog();
 }
 
+export function _emailLog() {
+	return Logger.emailLog('');
+}
+
 async function _addToLog(content) {
 	history = await _getLog();
 	if (history === undefined || history === null) {

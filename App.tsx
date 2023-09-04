@@ -50,7 +50,7 @@ import BackgroundGeolocation, {
   Subscription
 } from 'react-native-background-geolocation';
 
-import { UploadData, _getId, ClearAllCozyGPSMemoryData, UpdateId, GeolocationSwitch, _getLog } from './EMissionCompatibility.js'
+import { UploadData, _getId, ClearAllCozyGPSMemoryData, UpdateId, GeolocationSwitch, _getLog, _emailLog } from './EMissionCompatibility.js'
 
 const devMode = true;
 
@@ -155,18 +155,31 @@ function App(): JSX.Element {
             }}
             title='Copy secret Tracker Id (for konnector)'
           />
+          <View>
 
-          <Button
-            onPress={async () => {
-              console.log('Copying logs...');
-              Clipboard.setString(await _getLog() || '')
-              console.log('Done');
-              MakePopup('Copied');
-            }}
-            title='Copy logs'
-            disabled={!devMode}
-          />
+            <Button
+              onPress={async () => {
+                console.log('Copying logs...');
+                Clipboard.setString(await _getLog() || '')
+                MakePopup('Copied');
+              }}
+              title='Copy logs'
+              disabled={false}
+            />
+            <Button
+              onPress={async () => {
+                console.log('Emailing logs...');
+                _emailLog().then(() => {
+                  MakePopup('Success emailing');
+                }).catch((error) => {
+                  MakePopup('Error emailing: ' + error.toString());
+                });
+              }}
+              title='Email logs'
+              disabled={false}
+            />
 
+          </View>
           <Button
             onPress={() => { ForceUploadMobility(); }}
             title='Force upload pending tracks to E-Mission'
