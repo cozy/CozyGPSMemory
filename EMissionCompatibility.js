@@ -551,35 +551,29 @@ const onConnectivityChange = BackgroundGeolocation.onConnectivityChange(async (e
 export async function StartTracking() {
 	try {
 
+		await CozyGPSMemoryLog('Starting');
 
-		if (!((await BackgroundGeolocation.getState()).enabled)) {
+		await BackgroundGeolocation.ready({
+			// Geolocation Config
+			desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
+			showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
+			distanceFilter: 10,
+			locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
+			stationaryRadius: 25, //Minimum, but still usually takes 200m
+			// Activity Recognition
+			stopTimeout: stopTimeoutMin,
+			// Application config
+			debug: false, // <-- enable this hear sounds for background-geolocation life-cycle and notifications
+			logLevel: BackgroundGeolocation.LOG_LEVEL_DEBUG,
+			stopOnTerminate: false,   // <-- Allow the background-service to continue tracking when user closes the app. (not on iOS)
+			startOnBoot: true,        // <-- Auto start tracking when device is powered-up.
+			// HTTP / SQLite config
 
-			await CozyGPSMemoryLog('Starting');
+			batchSync: false,       // <-- [Default: false] Set true to sync locations to server in a single HTTP request.
+			autoSync: false,         // <-- [Default: true] Set true to sync each location to server as it arrives.
+		});
+		await BackgroundGeolocation.start();
 
-			await BackgroundGeolocation.ready({
-				// Geolocation Config
-				desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-				showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
-				distanceFilter: 10,
-				locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
-				stationaryRadius: 25, //Minimum, but still usually takes 200m
-				// Activity Recognition
-				stopTimeout: stopTimeoutMin,
-				// Application config
-				debug: false, // <-- enable this hear sounds for background-geolocation life-cycle and notifications
-				logLevel: BackgroundGeolocation.LOG_LEVEL_DEBUG,
-				stopOnTerminate: false,   // <-- Allow the background-service to continue tracking when user closes the app. (not on iOS)
-				startOnBoot: true,        // <-- Auto start tracking when device is powered-up.
-				// HTTP / SQLite config
-
-				batchSync: false,       // <-- [Default: false] Set true to sync locations to server in a single HTTP request.
-				autoSync: false,         // <-- [Default: true] Set true to sync each location to server as it arrives.
-			});
-			await BackgroundGeolocation.start();
-
-		} else {
-			await CozyGPSMemoryLog('Already on');
-		}
 		return true;
 	} catch { return false; }
 }
