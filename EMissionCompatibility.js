@@ -43,6 +43,8 @@ const LogAdress = 'CozyGPSMemory.Log';
 const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded';
 const versionIterationCounterStorageAdress = 'CozyGPSMemory.VersionIterationCounter';
 
+const Logger = BackgroundGeolocation.logger;
+
 
 async function _updateVersionIterationCounter() {
 	await AsyncStorage.setItem(versionIterationCounterStorageAdress, currVersionIterationCounter.toString());
@@ -62,7 +64,7 @@ async function _setLastPointUploaded(value) {
 }
 
 export async function _getLog() {
-	return await AsyncStorage.getItem(LogAdress);
+	return await Logger.getLog();
 }
 
 async function _addToLog(content) {
@@ -76,7 +78,8 @@ async function _addToLog(content) {
 
 async function CozyGPSMemoryLog(message) {
 	console.log(message);
-	await _addToLog(message);
+	// await _addToLog(message);
+	Logger.debug(message);
 }
 
 async function _ClearLog() {
@@ -140,6 +143,7 @@ export async function ClearAllCozyGPSMemoryData() {
 	await BackgroundGeolocation.destroyLocations();
 	await AsyncStorage.multiRemove([IdStorageAdress, FlagFailUploadStorageAdress, ShouldBeTrackingFlagStorageAdress, LogAdress, LastPointUploadedAdress, versionIterationCounterStorageAdress]);
 	await ClearOldCozyGPSMemoryStorage();
+	await BackgroundGeolocation.logger.destroyLog();
 	await CozyGPSMemoryLog('Everything cleared');
 }
 
@@ -317,21 +321,18 @@ async function UploadUserCache(content, user, uuidsToDeleteOnSuccess, lastPointT
 		},
 		body: JSON.stringify(JsonRequest),
 	})
+
 	if (heavyLogs) {
 		await CozyGPSMemoryLog('Uploaded: ' + JSON.stringify(JsonRequest));
-	} else {
-		toLog = [JsonRequest['phone_to_server'].slice(0, 10), JsonRequest['phone_to_server'].slice(JsonRequest['phone_to_server'].length - 10, JsonRequest['phone_to_server'].length)];
-		await CozyGPSMemoryLog('Uploaded (first 10 and last 10 of upload): ' + JSON.stringify(toLog));
 	}
 
 	if (!response.ok) {
-		await CozyGPSMemoryLog('Failure uploading');
 		throw new Error(String('Error in request response:', response.status, response.statusText, await response.text()));
 
 	} else {
 		await CozyGPSMemoryLog('Success uploading');
 		if (lastPointToSave != undefined) {
-			_setLastPointUploaded(lastPointToSave);
+			await _setLastPointUploaded(lastPointToSave);
 			await CozyGPSMemoryLog('Saved last point');
 		} else {
 			await CozyGPSMemoryLog('No last point to save');
@@ -348,7 +349,6 @@ async function UploadUserCache(content, user, uuidsToDeleteOnSuccess, lastPointT
 }
 
 async function uploadWithNoNewPoints(user, force) {
-	await CozyGPSMemoryLog('Uploading but no new points found');
 	lastPoint = await _getLastPointUploaded();
 	content = [];
 
@@ -357,14 +357,16 @@ async function uploadWithNoNewPoints(user, force) {
 		await UploadUserCache(content, user, []);
 	} else {
 		if (lastPoint == undefined) {
-			await CozyGPSMemoryLog('No past either, no upload');
+			await CozyGPSMemoryLog('No previous location either, no upload');
 		} else {
-			if (Date.now() / 1000 - getTs(lastPoint) > stopTimeout) { // Note: no problem if we add a stop if there's already one
-				await CozyGPSMemoryLog('Last point old enough, posting stop transitions: ' + (getTs(lastPoint) - Date.now() / 1000));
+			let deltaT = Date.now() / 1000 - getTs(lastPoint);
+			if (deltaT > stopTimeout) { // Note: no problem if we add a stop if there's already one
+				await CozyGPSMemoryLog('Previous location old enough (' + deltaT + 's ago), posting stop transitions at ' + getTs(lastPoint));
 				AddStopTransitions(content, getTs(lastPoint));
 				await UploadUserCache(content, user, []);
+				await CozyGPSMemoryLog('Finished upload of stop transtitions')
 			} else {
-				await CozyGPSMemoryLog('Last point too recent: ' + (getTs(lastPoint) - Date.now() / 1000));
+				await CozyGPSMemoryLog('Previous location too recent (' + deltaT + 's ago), no upload');
 			}
 		}
 	}
@@ -401,10 +403,9 @@ function AddPoint(addedTo, point, filtered) {
 }
 
 async function uploadPoints(points, user, previousPoint, nextPoint, force) {
-	await CozyGPSMemoryLog('Starting treating a batch of points')
 	content = [];
 	uuidsToDelete = [];
-	// CozyGPSMemoryLog(JSON.stringify(points));
+
 	for (let indexBuildingRequest = 0; indexBuildingRequest < points.length; indexBuildingRequest++) {
 		const point = points[indexBuildingRequest];
 		uuidsToDelete.push(point['uuid']);
@@ -412,19 +413,20 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 		const next = indexBuildingRequest == points.length - 1 ? nextPoint : points[indexBuildingRequest + 1];
 
 		if (prev == null || prev === undefined) {
-			await CozyGPSMemoryLog('No previous point found, adding start');
+			await CozyGPSMemoryLog('No previous point found, adding start at ' + (getTs(point) - 1) + 's');
 			AddStartTransitions(content, getTs(point) - 1);
+
 		} else {
-			// CozyGPSMemoryLog('prev: ' + JSON.stringify(prev) + ' curr: ' + JSON.stringify(point));
-			if (getTs(point) - getTs(prev) > stopTimeout) { // If the points are not close enough in time, we need to check that there was significant movement
-				await CozyGPSMemoryLog('Noticed a break > ' + stopTimeout);
+			let deltaT = getTs(point) - getTs(prev);
+			if (deltaT > stopTimeout) { // If the points are not close enough in time, we need to check that there was significant movement
+				await CozyGPSMemoryLog('Noticed a break: ' + deltaT + 's at ' + getTs(prev));
 				let distance = getDistanceFromLatLonInM(prev, point);
 				if (distance < 300) { // TO TEST : what is the smallest distance needed? Is it a function of the time stopped?
-					await CozyGPSMemoryLog('Small distance, adding stop and start: ' + distance + 'm');
+					await CozyGPSMemoryLog('Small distance (' + distance + 'm), adding stop and start at: ' + (getTs(prev) + 180) + ' and ' + (getTs(point) - 1));
 					AddStopTransitions(content, getTs(prev) + 180); // 3 min later for now
 					AddStartTransitions(content, getTs(point) - 1);
 				} else {
-					await CozyGPSMemoryLog('Long distance, leaving as is: ' + distance + 'm');
+					await CozyGPSMemoryLog('Long distance, leaving uninterrupted trip: ' + distance + 'm');
 				}
 			}
 		}
@@ -438,15 +440,16 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 
 		AddPoint(content, point, filtered);
 
-		if (next == null || next == undefined) {
-			if (getTs(point) - Date.now() / 1000 > longStopTimeout) {
-				AddStopTransitions(content, getTs(prev) + 180);
+		if (next == null || next == undefined) { // Triggered when at the last point of the batch and there is no next point given (so when it's the last recorded position)
+			if (Date.now() / 1000 - getTs(point) > longStopTimeout) {
+				CozyGPSMemoryLog('Last known point is at ' + getTs(point) + ', adding stop transitions at ' + getTs(point) + 180);
+				AddStopTransitions(content, getTs(point) + 180);
 			}
 		}
 	}
 
 	if (force) {
-		await CozyGPSMemoryLog('Forcing stop at the end of the batch');
+		await CozyGPSMemoryLog('Forcing stop at current time');
 		AddStopTransitions(content, Date.now() / 1000);
 	}
 
@@ -465,9 +468,9 @@ export async function SmartSend(locations, user, force) {
 	} else {
 
 		await CozyGPSMemoryLog('Found pending locations, uploading them');
-
+		let batchCounter = 0;
 		for (let index = 0; index < locations.length; index += maxPointsPerBatch) {
-			await CozyGPSMemoryLog('Uploading batch...');
+			await CozyGPSMemoryLog('Creating batch ' + (batchCounter + 1) + '/' + (locations.length / maxPointsPerBatch).toFixed(0));
 			await uploadPoints(
 				locations.slice(index, index + maxPointsPerBatch),
 				user,
@@ -475,6 +478,8 @@ export async function SmartSend(locations, user, force) {
 				index + maxPointsPerBatch < locations.length - 1 ? locations[index + maxPointsPerBatch] : undefined,
 				(force && index + maxPointsPerBatch >= locations.length)
 			);
+
+			batchCounter++;
 
 		}
 
@@ -562,7 +567,7 @@ export async function StartTracking() {
 				stopTimeout: stopTimeoutMin,
 				// Application config
 				debug: false, // <-- enable this hear sounds for background-geolocation life-cycle and notifications
-				logLevel: BackgroundGeolocation.LOG_LEVEL_VERBOSE,
+				logLevel: BackgroundGeolocation.LOG_LEVEL_DEBUG,
 				stopOnTerminate: false,   // <-- Allow the background-service to continue tracking when user closes the app. (not on iOS)
 				startOnBoot: true,        // <-- Auto start tracking when device is powered-up.
 				// HTTP / SQLite config
