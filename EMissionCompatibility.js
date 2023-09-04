@@ -365,7 +365,7 @@ async function uploadWithNoNewPoints(user, force) {
 		} else {
 			let deltaT = Date.now() / 1000 - getTs(lastPoint);
 			if (deltaT > stopTimeout) { // Note: no problem if we add a stop if there's already one
-				await CozyGPSMemoryLog('Previous location old enough (' + deltaT + 's ago), posting stop transitions at ' + getTs(lastPoint));
+				await CozyGPSMemoryLog('Previous location old enough (' + deltaT + 's ago), posting stop transitions at ' + new Date(1000 * getTs(lastPoint)));
 				AddStopTransitions(content, getTs(lastPoint));
 				await UploadUserCache(content, user, []);
 				await CozyGPSMemoryLog('Finished upload of stop transtitions')
@@ -417,13 +417,13 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 		const next = indexBuildingRequest == points.length - 1 ? nextPoint : points[indexBuildingRequest + 1];
 
 		if (prev == null || prev === undefined) {
-			await CozyGPSMemoryLog('No previous point found, adding start at ' + (getTs(point) - 1) + 's');
-			AddStartTransitions(content, getTs(point) - 1);
+			await CozyGPSMemoryLog('No previous point found, adding start at ' + new Date(1000 * (getTs(point) - 1)) + 's');
+			AddStartTransitions(content, new Date(1000 * (getTs(point) - 1)));
 
 		} else {
 			let deltaT = getTs(point) - getTs(prev);
 			if (deltaT > stopTimeout) { // If the points are not close enough in time, we need to check that there was significant movement
-				await CozyGPSMemoryLog('Noticed a break: ' + deltaT + 's at ' + getTs(prev));
+				await CozyGPSMemoryLog('Noticed a break: ' + deltaT + 's at ' + new Date(1000 * getTs(prev)));
 				let distance = getDistanceFromLatLonInM(prev, point);
 				if (distance < 300) { // TO TEST : what is the smallest distance needed? Is it a function of the time stopped?
 					await CozyGPSMemoryLog('Small distance (' + distance + 'm), adding stop and start at: ' + (getTs(prev) + 180) + ' and ' + (getTs(point) - 1));
@@ -446,7 +446,7 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 
 		if (next == null || next == undefined) { // Triggered when at the last point of the batch and there is no next point given (so when it's the last recorded position)
 			if (Date.now() / 1000 - getTs(point) > longStopTimeout) {
-				CozyGPSMemoryLog('Last known point is at ' + getTs(point) + ', adding stop transitions at ' + getTs(point) + 180);
+				CozyGPSMemoryLog('Last known point is at ' + new Date(1000 * getTs(point)) + ', adding stop transitions at ' + new Date(1000 * getTs(point)) + 180);
 				AddStopTransitions(content, getTs(point) + 180);
 			}
 		}
