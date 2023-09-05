@@ -297,6 +297,15 @@ function AddStartTransitions(addedTo, ts) {
 	addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_RESTARTED', ts + 0.04));
 }
 
+// Add hard start transitions, within 0.1s of given ts. Will not extend the trip to the previous point in e-mission
+function AddHardStartTransitions(addedTo, ts) {
+
+	addedTo.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01));
+	addedTo.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.02));
+	addedTo.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_VISIT_ENDED', ts + 0.03));
+	addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.04));
+}
+
 // Add stop transitions, within 0.1s of given ts
 function AddStopTransitions(addedTo, ts) {
 	addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01));
@@ -417,8 +426,8 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 		const next = indexBuildingRequest == points.length - 1 ? nextPoint : points[indexBuildingRequest + 1];
 
 		if (prev == null || prev === undefined) {
-			await CozyGPSMemoryLog('No previous point found, adding start at ' + new Date(1000 * (getTs(point) - 1)) + 's');
-			AddStartTransitions(content, getTs(point) - 1);
+			await CozyGPSMemoryLog('No previous point found, adding hard start at ' + new Date(1000 * (getTs(point) - 1)) + 's'); // Hard start will prevent trying to join to another trip's end (typically if tracking was manually disabled or if the app was reinstalled since the last trip end)
+			AddHardStartTransitions(content, getTs(point) - 1);
 
 		} else {
 			let deltaT = getTs(point) - getTs(prev);
@@ -592,9 +601,13 @@ export async function StopTracking() {
 
 		if ((await BackgroundGeolocation.getState()).enabled) {
 
-			await CozyGPSMemoryLog('Turned off tracking, uploading...');
-			await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
 			await BackgroundGeolocation.stop();
+			await CozyGPSMemoryLog('Turned off tracking, uploading...');
+			// Forced end, but if fails no current solution (won't retry until turned back on)
+			// Since the end is forced, will send end trip messages, and we delete the last point, so the next trip starts from a new first point
+			await UploadData(true);
+			await CozyGPSMemoryLog('Removing saved last point');
+			await AsyncStorage.removeItem(LastPointUploadedAdress);
 
 		} else {
 			console.log('Already off');
