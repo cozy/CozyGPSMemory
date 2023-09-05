@@ -418,7 +418,7 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 
 		if (prev == null || prev === undefined) {
 			await CozyGPSMemoryLog('No previous point found, adding start at ' + new Date(1000 * (getTs(point) - 1)) + 's');
-			AddStartTransitions(content, new Date(1000 * (getTs(point) - 1)));
+			AddStartTransitions(content, getTs(point) - 1);
 
 		} else {
 			let deltaT = getTs(point) - getTs(prev);
