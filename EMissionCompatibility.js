@@ -472,7 +472,7 @@ function AddPoint(addedTo, point, filtered) {
   }
 }
 
-async function uploadPoints(points, user, previousPoint, nextPoint, force) {
+async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
   const content = [];
   const uuidsToDelete = [];
 
@@ -484,13 +484,9 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
     const point = points[indexBuildingRequest];
     uuidsToDelete.push(point.uuid);
     const prev =
-      indexBuildingRequest == 0
-        ? previousPoint
+      indexBuildingRequest == 0 // Handles setting up the case for the first point
+        ? previousPoint // Can be undefined
         : points[indexBuildingRequest - 1];
-    const next =
-      indexBuildingRequest == points.length - 1
-        ? nextPoint
-        : points[indexBuildingRequest + 1];
 
     if (prev == null || prev === undefined) {
       await CozyGPSMemoryLog(
@@ -536,8 +532,8 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 
     AddPoint(content, point, filtered);
 
-    if (next == null || next == undefined) {
-      // Triggered when at the last point of the batch and there is no next point given (so when it's the last recorded position)
+    if (isLastBatch && indexBuildingRequest===points.length) {
+      // Triggered when at the last point of the batch and there is no next batch (so when it's the last recorded position)
       if (Date.now() / 1000 - getTs(point) > longStopTimeout) {
         CozyGPSMemoryLog(
           'Last known point is at ' +
@@ -579,9 +575,7 @@ export async function SmartSend(locations, user, force) {
         locations.slice(index, index + maxPointsPerBatch),
         user,
         index == 0 ? await _getLastPointUploaded() : locations[index - 1],
-        index + maxPointsPerBatch < locations.length - 1
-          ? locations[index + maxPointsPerBatch]
-          : undefined,
+        index + maxPointsPerBatch >= locations.length,
         force && index + maxPointsPerBatch >= locations.length,
       );
 
