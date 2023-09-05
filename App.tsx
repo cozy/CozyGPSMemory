@@ -5,52 +5,31 @@
  * @format
  */
 
-import React, { useState } from 'react';
-import type { PropsWithChildren } from 'react';
+import React, {useState} from 'react';
 
 import {
   Button,
   Modal,
   SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
-  Switch,
   Text,
-  TextBase,
   TextInput,
   useColorScheme,
   View,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 
+import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
-import BackgroundGeolocation, {
-  State,
-  Config,
-  Location,
-  LocationError,
-  Geofence,
-  GeofenceEvent,
-  GeofencesChangeEvent,
-  HeartbeatEvent,
-  HttpEvent,
-  MotionActivityEvent,
-  MotionChangeEvent,
-  ProviderChangeEvent,
-  ConnectivityChangeEvent,
-  Subscription
-} from 'react-native-background-geolocation';
-
-import { UploadData, _getId, ClearAllCozyGPSMemoryData, UpdateId, GeolocationSwitch, _getLog, _emailLog } from './EMissionCompatibility.js'
+  UploadData,
+  _getId,
+  ClearAllCozyGPSMemoryData,
+  UpdateId,
+  GeolocationSwitch,
+  _getLog,
+  _emailLog,
+} from './EMissionCompatibility.js';
 
 const devMode = true;
 
@@ -64,9 +43,9 @@ function App(): JSX.Element {
   const [PopUpVisible, setPopUpVisible] = useState(false);
   const [idInputPopupVisible, setIdInputPopupVisible] = useState(false);
   const DisplayIdInputPopup = async () => {
-    setIdBoxTest(await _getId() || '');
+    setIdBoxTest((await _getId()) || '');
     setIdInputPopupVisible(true);
-  }
+  };
   const ForceUploadMobility = async () => {
     if (await UploadData(true)) {
       MakePopup('✅ All mobility measures uploaded!');
@@ -90,20 +69,18 @@ function App(): JSX.Element {
     return (
       <Modal
         visible={PopUpVisible}
-        animationType='fade'
+        animationType="fade"
         transparent={true}
-        onRequestClose={closeModal}
-      >
+        onRequestClose={closeModal}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalText}>{popUpText}</Text>
-            <Button title='Close' onPress={closeModal} />
+            <Button title="Close" onPress={closeModal} />
           </View>
         </View>
       </Modal>
-    )
-  }
-
+    );
+  };
 
   function MakePopup(text: string) {
     setPopUpText(text);
@@ -113,13 +90,14 @@ function App(): JSX.Element {
   async function UpdateIdFromButton(newId: string) {
     let result = await UpdateId(newId);
     switch (result) {
-
       case 'SUCCESS_STORING_SUCCESS_CREATING':
         MakePopup('✅ Id successfully updated');
         break;
 
       case 'SUCCESS_STORING_FAIL_CREATING':
-        MakePopup('🛜 Couldn\'t create Id on the Openpath server, but it will be done before the next upload');
+        MakePopup(
+          "🛜 Couldn't create Id on the Openpath server, but it will be done before the next upload",
+        );
         break;
 
       case 'SAME_ID_OR_INVALID_ID':
@@ -127,7 +105,7 @@ function App(): JSX.Element {
         break;
 
       default:
-        MakePopup('❌ Unexpected error updating the user Id')
+        MakePopup('❌ Unexpected error updating the user Id');
         break;
     }
   }
@@ -139,11 +117,10 @@ function App(): JSX.Element {
           backgroundColor: isDarkMode ? Colors.black : Colors.white,
           paddingVertical: 200,
           justifyContent: 'center',
-          alignContent: 'center'
+          alignContent: 'center',
         }}>
         <View>
-
-          <GeolocationSwitch></GeolocationSwitch>
+          <GeolocationSwitch />
 
           <Button
             onPress={async function () {
@@ -153,36 +130,38 @@ function App(): JSX.Element {
               }
               Clipboard.setString(idToCopy);
             }}
-            title='Copy secret Tracker Id (for konnector)'
+            title="Copy secret Tracker Id (for konnector)"
           />
           <View>
-
             <Button
               onPress={async () => {
                 console.log('Copying logs...');
-                Clipboard.setString(await _getLog() || '')
+                Clipboard.setString((await _getLog()) || '');
                 MakePopup('Copied');
               }}
-              title='Copy logs'
+              title="Copy logs"
               disabled={false}
             />
             <Button
               onPress={async () => {
                 console.log('Emailing logs...');
-                _emailLog().then(() => {
-                  MakePopup('Success emailing');
-                }).catch((error) => {
-                  MakePopup('Error emailing: ' + error.toString());
-                });
+                _emailLog()
+                  .then(() => {
+                    MakePopup('Success emailing');
+                  })
+                  .catch(error => {
+                    MakePopup('Error emailing: ' + error.toString());
+                  });
               }}
-              title='Email logs'
+              title="Email logs"
               disabled={false}
             />
-
           </View>
           <Button
-            onPress={() => { ForceUploadMobility(); }}
-            title='Force upload pending tracks to E-Mission'
+            onPress={() => {
+              ForceUploadMobility();
+            }}
+            title="Force upload pending tracks to E-Mission"
             disabled={!devMode}
           />
 
@@ -190,10 +169,9 @@ function App(): JSX.Element {
             onPress={async function () {
               DisplayIdInputPopup();
             }}
-            title='Manually redefine secret Tracker Id'
+            title="Manually redefine secret Tracker Id"
             disabled={!devMode}
           />
-
         </View>
         <Button
           onPress={async function () {
@@ -201,34 +179,31 @@ function App(): JSX.Element {
               await ClearAllCozyGPSMemoryData();
               MakePopup('Deleted everything');
             } catch (error) {
-              MakePopup('Couldn\'t purge\n' + error)
+              MakePopup("Couldn't purge\n" + error);
             }
           }}
-          title='Purge all local data'
+          title="Purge all local data"
           color={'#ff3b30'}
           disabled={!devMode}
         />
 
-        <PopUp></PopUp>
-
-
+        <PopUp />
 
         <Modal
           visible={idInputPopupVisible}
-          animationType='fade'
+          animationType="fade"
           transparent={true}
           onRequestClose={closeIdInputPopup}
-          style={{ alignContent: 'center', justifyContent: 'center' }}
-        >
+          style={{alignContent: 'center', justifyContent: 'center'}}>
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={{ fontSize: 24, textAlign: 'center' }}>New Id</Text>
+              <Text style={{fontSize: 24, textAlign: 'center'}}>New Id</Text>
               <TextInput
                 autoFocus={true}
                 value={IdBoxText}
                 onChangeText={setIdBoxTest}
                 selectTextOnFocus={true}
-                keyboardType='email-address'
+                keyboardType="email-address"
                 style={{
                   padding: 20,
                   alignContent: 'center',
@@ -237,21 +212,24 @@ function App(): JSX.Element {
                   fontSize: 18,
                 }}
               />
-              <Button title='Cancel (keep existing Id)' onPress={async function () {
-                closeIdInputPopup();
-              }
-              } />
-              <Button title='Validate' onPress={async function () {
-                closeIdInputPopup();
-                UpdateIdFromButton(IdBoxText);
-              }
-              } />
+              <Button
+                title="Cancel (keep existing Id)"
+                onPress={async function () {
+                  closeIdInputPopup();
+                }}
+              />
+              <Button
+                title="Validate"
+                onPress={async function () {
+                  closeIdInputPopup();
+                  UpdateIdFromButton(IdBoxText);
+                }}
+              />
             </View>
           </View>
         </Modal>
-
-      </View >
-    </SafeAreaView >
+      </View>
+    </SafeAreaView>
   );
 }
 
