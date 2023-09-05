@@ -159,11 +159,11 @@ export async function ClearAllCozyGPSMemoryData() {
   await AsyncStorage.multiRemove([
     IdStorageAdress,
     FlagFailUploadStorageAdress,
-    ShouldBeTrackingFlagStorageAdress,
     LogAdress,
     LastPointUploadedAdress,
     versionIterationCounterStorageAdress,
   ]);
+  // Only exception : ShouldBeTrackingFlagStorageAdress, don't know the effects on the switch and would not feel natural anyway
   await ClearOldCozyGPSMemoryStorage();
   await BackgroundGeolocation.logger.destroyLog();
   await CozyGPSMemoryLog('Everything cleared');
@@ -508,7 +508,7 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
         );
         let distance = getDistanceFromLatLonInM(prev, point);
         if (distance < 300) {
-          // TO TEST : what is the smallest distance needed? Is it a function of the time stopped?
+          // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
           await CozyGPSMemoryLog(
             'Small distance (' +
               distance +
@@ -574,7 +574,7 @@ export async function SmartSend(locations, user, force) {
           (batchCounter + 1) +
           '/' +
           (1 + locations.length / maxPointsPerBatch).toFixed(0),
-      );
+      ); // Probably imperfect, TO DO: check formula
       await uploadPoints(
         locations.slice(index, index + maxPointsPerBatch),
         user,
