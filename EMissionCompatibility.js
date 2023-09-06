@@ -239,16 +239,18 @@ function TranslateToEMissionLocationPoint(location_point) {
 
 function TranslateToEMissionMotionActivityPoint(location) {
   let ts = Math.floor(parseISOString(location.timestamp).getTime() / 1000);
+  Log('Activity type : ' + location.activity.type);
+  // See: https://transistorsoft.github.io/react-native-background-geolocation/interfaces/motionactivity.html#type
   return {
     data: {
-      cycling: location.activity.type == 'on_bicycle',
+      cycling: location.activity.type === 'on_bicycle',
+      running: location.activity.type === 'running',
       walking:
-        location.activity.type == 'walking' ||
-        location.activity.type == 'on_foot', // A voir
-      running: location.activity.type == 'running',
-      automotive: location.activity.type == 'in_vehicle', // Stationary et automotive sont sensés être compatibles sur ios
-      stationary: location.activity.type == 'still',
-      unknown: location.activity.type == 'unknown',
+        location.activity.type === 'walking' ||
+        location.activity.type === 'on_foot', // on_foot includes running or walking
+      automotive: location.activity.type === 'in_vehicle',
+      stationary: location.activity.type === 'still',
+      unknown: location.activity.type === 'unknown',
       confidence: location.activity.confidence,
       ts: ts + 0.2,
       confidence_level:
