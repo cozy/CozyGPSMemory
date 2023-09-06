@@ -688,9 +688,9 @@ export async function StartTracking() {
 export async function StopTracking() {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
+	  await BackgroundGeolocation.stop();
       await CozyGPSMemoryLog('Turned off tracking, uploading...');
       await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
-      await BackgroundGeolocation.stop();
     } else {
       console.log('Already off');
     }
