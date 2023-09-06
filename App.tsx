@@ -27,8 +27,8 @@ import {
   ClearAllCozyGPSMemoryData,
   UpdateId,
   GeolocationSwitch,
-  _getLog,
-  _emailLog,
+  getAllLogs,
+  extractLogFile,
 } from './EMissionCompatibility.js';
 
 const devMode = true;
@@ -136,24 +136,24 @@ function App(): JSX.Element {
             <Button
               onPress={async () => {
                 console.log('Copying logs...');
-                Clipboard.setString((await _getLog()) || '');
+                Clipboard.setString((await getAllLogs()) || '');
                 MakePopup('Copied');
               }}
-              title="Copy logs"
+              title="Copy logs in clipboard"
               disabled={false}
             />
             <Button
               onPress={async () => {
-                console.log('Emailing logs...');
-                _emailLog()
+                console.log('Extract logs file');
+                extractLogFile()
                   .then(() => {
-                    MakePopup('Success emailing');
+                    MakePopup('Extraction successful');
                   })
                   .catch(error => {
-                    MakePopup('Error emailing: ' + error.toString());
+                    MakePopup('Error: ' + error.toString());
                   });
               }}
-              title="Email logs"
+              title="Extract logs file"
               disabled={false}
             />
           </View>

@@ -15,7 +15,6 @@ const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
 const heavyLogs = false; // Log points, motion changes...
-const maxLogSize = 100000; // In characters
 const detectMotionActivity = true;
 
 // Storage adresses used by AsyncStorage
@@ -64,21 +63,12 @@ async function _setLastPointUploaded(value) {
   await AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value));
 }
 
-export async function _getLog() {
-  return await Logger.getLog();
+export async function getAllLogs() {
+  return Logger.getLog();
 }
 
-export function _emailLog() {
+export function extractLogFile() {
   return Logger.emailLog('');
-}
-
-async function _addToLog(content) {
-  let history = await _getLog();
-  if (history === undefined || history === null) {
-    history = '';
-  }
-  history += Date.now() + ' | ' + content + '\n';
-  await AsyncStorage.setItem(LogAdress, history.slice(-maxLogSize));
 }
 
 export function Log(message) {
