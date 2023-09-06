@@ -596,28 +596,35 @@ const onProviderChange = BackgroundGeolocation.onProviderChange(async (event) =>
 });
 */
 
-if (Platform.OS != 'android') {
-  // In doubt, add the events just in case... but the app should only go to android or ios
-  const onMotionChange = BackgroundGeolocation.onMotionChange(async event => {
-    Log('State change: ' + (event.isMoving ? 'Started moving' : 'Stopped'));
-    if (!event.isMoving) {
-      Log('Auto uploading from stop');
-      await UploadData();
-    }
-  });
+export async function handleMotionChange(event) {
+  Log('[MOTION CHANGE] - ' + JSON.stringify(event));
 
-  const onConnectivityChange = BackgroundGeolocation.onConnectivityChange(
-    async event => {
-      // ne trigger pas en emul ios, donne event = {'connected': false}
-      // à tester en réel
-      Log('Connectivity change to: ' + event.connected);
-      if (event.connected && (await _getFlagFailUpload())) {
-        Log('Auto uploading from reconnection and failed last attempt');
-        await UploadData();
-      }
-    },
-  );
+  const isStationary = !event.isMoving || event.activity?.still; // The isMoving param does not seem reliable with Android headless mode
+  if (isStationary) {
+    Log('Auto uploading from stop');
+    await UploadData();
+  }
 }
+
+export async function handleConnectivityChange(event) {
+  Log('[CONNECTIVITY CHANGE] - ' + JSON.stringify(event));
+
+  // Does not work with iOS emulator, event.connected is always false
+  if (event.connected && (await _getFlagFailUpload())) {
+    Log('Auto uploading from reconnection and failed last attempt');
+    await UploadData();
+  }
+}
+
+// Register on motion change
+BackgroundGeolocation.onMotionChange(async event => {
+  Log('Enter onMotion change event')
+  return handleMotionChange(event);
+});
+
+BackgroundGeolocation.onConnectivityChange(async event => {
+  return handleConnectivityChange(event);
+});
 
 export async function StartTracking() {
   try {
