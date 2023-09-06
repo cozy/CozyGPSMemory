@@ -502,7 +502,7 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
 
     AddPoint(content, point, filtered);
 
-    if (isLastBatch && indexBuildingRequest===points.length) {
+    if (isLastBatch && indexBuildingRequest === points.length) {
       // Triggered when at the last point of the batch and there is no next batch (so when it's the last recorded position)
       if (Date.now() / 1000 - getTs(point) > timeSinceLastPointToAddStopTransitions) {
         Log(
@@ -654,7 +654,7 @@ export async function StartTracking() {
 export async function StopTracking() {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
-	    await BackgroundGeolocation.stop();
+      await BackgroundGeolocation.stop();
       Log('Turned off tracking, uploading...');
       await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
     } else {
