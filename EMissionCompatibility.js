@@ -29,12 +29,12 @@ const OldStorageAdresses = [
   'CozyGPSMemory.UploadHistory',
   'CozyGPSMemory.Stops',
   'CozyGPSMemory.AutoUploadFlag',
+  'CozyGPSMemory.Log',
 ];
 
 const IdStorageAdress = 'CozyGPSMemory.Id';
 const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
 const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
-const LogAdress = 'CozyGPSMemory.Log';
 const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded';
 const versionIterationCounterStorageAdress =
   'CozyGPSMemory.VersionIterationCounter';
@@ -74,10 +74,6 @@ export function sendLogFile() {
 export function Log(message) {
   console.log(message);
   Logger.debug(message);
-}
-
-async function _ClearLog() {
-  await AsyncStorage.removeItem(LogAdress);
 }
 
 async function _storeFlagFailUpload(Flag) {
@@ -142,7 +138,6 @@ export async function ClearAllCozyGPSMemoryData() {
   await AsyncStorage.multiRemove([
     IdStorageAdress,
     FlagFailUploadStorageAdress,
-    LogAdress,
     LastPointUploadedAdress,
     versionIterationCounterStorageAdress,
   ]);
@@ -153,7 +148,7 @@ export async function ClearAllCozyGPSMemoryData() {
 }
 
 export async function ClearOldCozyGPSMemoryStorage() {
-  await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since variable names were updated
+  await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since storage was updated
 }
 
 async function CheckForUpdateActions() {
@@ -168,9 +163,9 @@ async function CheckForUpdateActions() {
     await ClearOldCozyGPSMemoryStorage();
     Log('Cleared old storages');
     if (lastVersion < 2) {
-      await _ClearLog();
+      await ClearOldCozyGPSMemoryStorage();
       Log(
-        'Cleared logs because we may be updating from a version with logs too big to handle',
+        'Cleared old storage adresses because we may be updating from an old version',
       );
     }
     _updateVersionIterationCounter();
