@@ -449,7 +449,7 @@ function AddPoint(addedTo, point, filtered) {
   }
 }
 
-async function uploadPoints(points, user, previousPoint, nextPoint, force) {
+async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
   const content = [];
   const uuidsToDelete = [];
 
@@ -461,13 +461,9 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
     const point = points[indexBuildingRequest];
     uuidsToDelete.push(point.uuid);
     const prev =
-      indexBuildingRequest == 0
-        ? previousPoint
+      indexBuildingRequest == 0 // Handles setting up the case for the first point
+        ? previousPoint // Can be undefined
         : points[indexBuildingRequest - 1];
-    const next =
-      indexBuildingRequest == points.length - 1
-        ? nextPoint
-        : points[indexBuildingRequest + 1];
 
     if (prev == null || prev === undefined) {
       Log(
@@ -511,8 +507,8 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 
     AddPoint(content, point, filtered);
 
-    if (next == null || next == undefined) {
-      // Triggered when at the last point of the batch and there is no next point given (so when it's the last recorded position)
+    if (isLastBatch && indexBuildingRequest===points.length) {
+      // Triggered when at the last point of the batch and there is no next batch (so when it's the last recorded position)
       if (Date.now() / 1000 - getTs(point) > longStopTimeout) {
         Log(
           'Last known point is at ' +
@@ -526,7 +522,7 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
     }
   }
 
-  if (force) {
+  if (force && isLastBatch) {
     Log('Forcing stop at current time');
     AddStopTransitions(content, Date.now() / 1000);
   }
@@ -554,10 +550,8 @@ export async function SmartSend(locations, user, force) {
         locations.slice(index, index + maxPointsPerBatch),
         user,
         index == 0 ? await _getLastPointUploaded() : locations[index - 1],
-        index + maxPointsPerBatch < locations.length - 1
-          ? locations[index + maxPointsPerBatch]
-          : undefined,
-        force && index + maxPointsPerBatch >= locations.length,
+        index + maxPointsPerBatch >= locations.length,
+        force,
       );
 
       batchCounter++;
@@ -640,7 +634,7 @@ export async function StartTracking() {
       showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
       distanceFilter: 10,
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
-      stationaryRadius: 25, //Minimum, but still usually takes 200m
+      stationaryRadius: 200, // Minimum, but still usually takes 200m
       // Activity Recognition
       stopTimeout: stopTimeoutMin,
       // Application config
@@ -665,9 +659,9 @@ export async function StartTracking() {
 export async function StopTracking() {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
+	    await BackgroundGeolocation.stop();
       Log('Turned off tracking, uploading...');
       await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
-      await BackgroundGeolocation.stop();
     } else {
       console.log('Already off');
     }
