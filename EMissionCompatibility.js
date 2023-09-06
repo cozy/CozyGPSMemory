@@ -547,7 +547,7 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
     }
   }
 
-  if (force) {
+  if (force && isLastBatch) {
     await CozyGPSMemoryLog('Forcing stop at current time');
     AddStopTransitions(content, Date.now() / 1000);
   }
@@ -576,7 +576,7 @@ export async function SmartSend(locations, user, force) {
         user,
         index == 0 ? await _getLastPointUploaded() : locations[index - 1],
         index + maxPointsPerBatch >= locations.length,
-        force && index + maxPointsPerBatch >= locations.length,
+        force,
       );
 
       batchCounter++;
