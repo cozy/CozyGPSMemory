@@ -528,9 +528,9 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
 export async function SmartSend(locations, user, force) {
   await CreateUser(user); // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
 
-  if (locations.length == 0) {
+  if (locations.length === 0) {
     Log('No new locations');
-    uploadWithNoNewPoints(user, force);
+    await uploadWithNoNewPoints(user, force);
   } else {
     Log('Found pending locations, uploading them');
     let batchCounter = 0;
@@ -544,7 +544,7 @@ export async function SmartSend(locations, user, force) {
       await uploadPoints(
         locations.slice(index, index + maxPointsPerBatch),
         user,
-        index == 0 ? await _getLastPointUploaded() : locations[index - 1],
+        index === 0 ? await _getLastPointUploaded() : locations[index - 1],
         index + maxPointsPerBatch < locations.length - 1
           ? locations[index + maxPointsPerBatch]
           : undefined,
