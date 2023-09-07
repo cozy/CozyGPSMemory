@@ -230,6 +230,9 @@ function TranslateToEMissionLocationPoint(location_point) {
 function TranslateToEMissionMotionActivityPoint(location) {
   let ts = Math.floor(parseISOString(location.timestamp).getTime() / 1000);
   Log('Activity type : ' + location.activity.type);
+  if (location.activity.type === 'unknown') {
+    Log('Unknown activity at: ' + location.timestamp);
+  }
   // See: https://transistorsoft.github.io/react-native-background-geolocation/interfaces/motionactivity.html#type
   return {
     data: {
