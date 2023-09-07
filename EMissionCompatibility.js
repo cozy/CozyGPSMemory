@@ -6,7 +6,7 @@ import {getUniqueId} from 'react-native-device-info';
 
 import {Switch, Text, useColorScheme, View} from 'react-native';
 
-const currVersionIterationCounter = 2; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
+const currVersionIterationCounter = 3; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
 const DestroyLocalOnSuccess = true;
 const stopTimeoutMin = 11;
 const stopTimeout = 300; // Shouldn't have longer breaks without siginificant movement
