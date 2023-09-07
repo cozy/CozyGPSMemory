@@ -515,23 +515,11 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
     AddPoint(content, point, filtered);
 
     if (next == null || next == undefined) {
-      // Triggered when at the last point of the batch and there is no next point given (so when it's the last recorded position)
-      if (Date.now() / 1000 - getTs(point) > longStopTimeout) {
-        Log(
-          'Last known point is at ' +
-            new Date(1000 * getTs(point)) +
-            ', adding stop transitions at ' +
-            new Date(1000 * getTs(point)) +
-            180,
-        );
-        AddStopTransitions(content, getTs(point) + 180);
-      }
+      // Force a stop transition for the last point
+      const deltaLastPoint = Date.now() / 1000 - getTs(point);
+      Log('Delta last point : ' + deltaLastPoint);
+      AddStopTransitions(content, getTs(point) + 180);
     }
-  }
-
-  if (force) {
-    Log('Forcing stop at current time');
-    AddStopTransitions(content, Date.now() / 1000);
   }
 
   await UploadUserCache(content, user, uuidsToDelete, points.at(-1));
