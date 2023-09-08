@@ -516,7 +516,11 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
   await UploadUserCache(content, user, uuidsToDelete, points.at(-1));
 }
 
-export async function SmartSend(locations, user, force) {
+export async function SmartSend(
+  locations,
+  user,
+  {force = true, untilTs = 0} = {},
+) {
   await CreateUser(user); // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
 
   if (locations.length === 0) {
@@ -549,20 +553,29 @@ export async function SmartSend(locations, user, force) {
   }
 }
 
-export async function UploadData(force = false) {
+export async function UploadData({untilTs = 0, force = false} = {}) {
   // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
   Log('Starting upload process' + (force ? ', forced' : ''));
 
   try {
-    let locations = await BackgroundGeolocation.getLocations();
-    // CozyGPSMemoryLog(locations);
+    const locations = await BackgroundGeolocation.getLocations();
+    let filteredLocations;
+    // Filter out locations that might tracked afterwards the trigger event
+    if (untilTs > 0) {
+      filteredLocations = locations.filter(loc => loc.timestamp <= untilTs);
+    } else {
+      filteredLocations = locations;
+    }
+    if (filteredLocations.length < locations.length) {
+      Log('Locations filtered: ' + filteredLocations.length - locations.length);
+    }
 
     let user = await _getId();
     Log('Using Id: ' + user);
 
     try {
-      await SmartSend(locations, user, force);
+      await SmartSend(filteredLocations, user, {force, untilTs});
       await _storeFlagFailUpload(false);
       return true;
     } catch (message) {
@@ -594,8 +607,10 @@ export async function handleMotionChange(event) {
 
   const isStationary = !event.isMoving || event.activity?.still; // The isMoving param does not seem reliable with Android headless mode
   if (isStationary) {
+    // Get the event timestamp to filter out locations tracked after this
+    const stationaryTs = event.location?.timestamp;
     Log('Auto uploading from stop');
-    await UploadData();
+    await UploadData({untilTs: stationaryTs});
   }
 }
 
@@ -611,7 +626,7 @@ export async function handleConnectivityChange(event) {
 
 // Register on motion change
 BackgroundGeolocation.onMotionChange(async event => {
-  Log('Enter onMotion change event')
+  Log('Enter onMotion change event');
   return handleMotionChange(event);
 });
 
@@ -656,7 +671,7 @@ export async function StopTracking() {
     if ((await BackgroundGeolocation.getState()).enabled) {
       await BackgroundGeolocation.stop();
       Log('Turned off tracking, uploading...');
-      await UploadData(true); // Forced end, but if fails no current solution (won't retry until turned back on)
+      await UploadData({force: true}); // Forced end, but if fails no current solution (won't retry until turned back on)
     } else {
       console.log('Already off');
     }
