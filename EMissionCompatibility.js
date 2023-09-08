@@ -10,7 +10,6 @@ const currVersionIterationCounter = 3; // Simple counter to iterate versions whi
 const DestroyLocalOnSuccess = true;
 const waitBeforeStopMotionEvent = 11;
 const timeToAddStopTransitions = 300; // Shouldn't have longer breaks without siginificant movement
-const timeSinceLastPointToAddStopTransitions = 530;
 const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
@@ -459,7 +458,7 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
     const point = points[indexBuildingRequest];
     uuidsToDelete.push(point.uuid);
     const prev =
-      indexBuildingRequest == 0 // Handles setting up the case for the first point
+      indexBuildingRequest === 0 // Handles setting up the case for the first point
         ? previousPoint // Can be undefined
         : points[indexBuildingRequest - 1];
 
@@ -471,13 +470,13 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
       );
       AddStartTransitions(content, getTs(point) - 1);
     } else {
-      let deltaT = getTs(point) - getTs(prev);
+      const deltaT = getTs(point) - getTs(prev);
       if (deltaT > timeToAddStopTransitions) {
         // If the points are not close enough in time, we need to check that there was significant movement
         Log(
           'Noticed a break: ' + deltaT + 's at ' + new Date(1000 * getTs(prev)),
         );
-        let distance = getDistanceFromLatLonInM(prev, point);
+        const distance = getDistanceFromLatLonInM(prev, point);
         if (distance < 300) {
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
           Log(
@@ -516,11 +515,7 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
   await UploadUserCache(content, user, uuidsToDelete, points.at(-1));
 }
 
-export async function SmartSend(
-  locations,
-  user,
-  {force = true, untilTs = 0} = {},
-) {
+export async function SmartSend(locations, user, {force = true} = {}) {
   await CreateUser(user); // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
 
   if (locations.length === 0) {
@@ -540,10 +535,8 @@ export async function SmartSend(
         locations.slice(index, index + maxPointsPerBatch),
         user,
         index === 0 ? await _getLastPointUploaded() : locations[index - 1],
-        index + maxPointsPerBatch < locations.length - 1
-          ? locations[index + maxPointsPerBatch]
-          : undefined,
-        force && index + maxPointsPerBatch >= locations.length,
+        index + maxPointsPerBatch >= locations.length,
+        force,
       );
 
       batchCounter++;
@@ -575,7 +568,7 @@ export async function UploadData({untilTs = 0, force = false} = {}) {
     Log('Using Id: ' + user);
 
     try {
-      await SmartSend(filteredLocations, user, {force, untilTs});
+      await SmartSend(filteredLocations, user, {force});
       await _storeFlagFailUpload(false);
       return true;
     } catch (message) {
