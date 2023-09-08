@@ -487,6 +487,7 @@ async function uploadPoints(points, user, previousPoint, nextPoint, force) {
           'Noticed a break: ' + deltaT + 's at ' + new Date(1000 * getTs(prev)),
         );
         let distance = getDistanceFromLatLonInM(prev, point);
+
         if (distance < 300) {
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
           Log(
@@ -636,7 +637,8 @@ export async function StartTracking() {
       // Geolocation Config
       desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
       showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
-      distanceFilter: 10,
+      distanceFilter: 30,
+      elasticityMultiplier: 5,
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
       stationaryRadius: 25, //Minimum, but still usually takes 200m
       // Activity Recognition
