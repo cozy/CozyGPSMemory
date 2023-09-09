@@ -8,9 +8,9 @@ import {Switch, Text, useColorScheme, View} from 'react-native';
 
 const currVersionIterationCounter = 3; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
 const DestroyLocalOnSuccess = true;
-const stopTimeoutMin = 11;
-const stopTimeout = 300; // Shouldn't have longer breaks without siginificant movement
-const longStopTimeout = 530;
+const waitBeforeStopMotionEvent = 11;
+const timeToAddStopTransitions = 300; // Shouldn't have longer breaks without siginificant movement
+const timeSinceLastPointToAddStopTransitions = 530;
 const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
@@ -394,7 +394,7 @@ async function uploadWithNoNewPoints(user, force) {
       Log('No previous location either, no upload');
     } else {
       let deltaT = Date.now() / 1000 - getTs(lastPoint);
-      if (deltaT > stopTimeout) {
+      if (deltaT > timeToAddStopTransitions) {
         // Note: no problem if we add a stop if there's already one
         Log(
           'Previous location old enough (' +
@@ -469,7 +469,7 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
       AddStartTransitions(content, getTs(point) - 1);
     } else {
       let deltaT = getTs(point) - getTs(prev);
-      if (deltaT > stopTimeout) {
+      if (deltaT > timeToAddStopTransitions) {
         // If the points are not close enough in time, we need to check that there was significant movement
         Log(
           'Noticed a break: ' + deltaT + 's at ' + new Date(1000 * getTs(prev)),
@@ -504,7 +504,7 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
 
     if (isLastBatch && indexBuildingRequest===points.length) {
       // Triggered when at the last point of the batch and there is no next batch (so when it's the last recorded position)
-      if (Date.now() / 1000 - getTs(point) > longStopTimeout) {
+      if (Date.now() / 1000 - getTs(point) > timeSinceLastPointToAddStopTransitions) {
         Log(
           'Last known point is at ' +
             new Date(1000 * getTs(point)) +
@@ -631,7 +631,7 @@ export async function StartTracking() {
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
       stationaryRadius: 200, // Minimum, but still usually takes 200m
       // Activity Recognition
-      stopTimeout: stopTimeoutMin,
+      stopTimeout: waitBeforeStopMotionEvent,
       // Application config
       debug: false, // <-- enable this hear sounds for background-geolocation life-cycle and notifications
       logLevel: BackgroundGeolocation.LOG_LEVEL_DEBUG,
