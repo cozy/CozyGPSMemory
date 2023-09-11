@@ -635,7 +635,8 @@ export async function StartTracking() {
       // Geolocation Config
       desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
       showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
-      distanceFilter: 10,
+      distanceFilter: 20,
+      elasticityMultiplier: 3,
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
       stationaryRadius: 200, // Minimum, but still usually takes 200m
       // Activity Recognition
