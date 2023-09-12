@@ -14,7 +14,6 @@ const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
 const heavyLogs = false; // Log points, motion changes...
-const detectMotionActivity = true;
 
 // Storage adresses used by AsyncStorage
 // Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
@@ -433,21 +432,28 @@ function getDistanceFromLatLonInM(point1, point2) {
   return d * 1000;
 }
 
-function AddPoint(addedTo, point, filtered) {
-  addedTo.push(TranslateToEMissionLocationPoint(point));
+const addPoint = (content, point, filtered) => {
+  content.push(TranslateToEMissionLocationPoint(point));
 
   if (filtered) {
-    addedTo.push(TranslateToEMissionLocationPoint(point));
-    addedTo.at(-1).metadata.key = 'background/filtered_location';
+    content.push(TranslateToEMissionLocationPoint(point));
+    content.at(-1).metadata.key = 'background/filtered_location';
   }
 
-  if (detectMotionActivity) {
-    addedTo.push(TranslateToEMissionMotionActivityPoint(point));
-  }
-}
+  content.push(TranslateToEMissionMotionActivityPoint(point));
+};
 
-async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
-  const content = [];
+const addMotionActivity = (content, previousPoint, point) => {
+  if (!previousPoint || previousPoint.activity?.type !== point.activity?.type) {
+    // Add new activity type when it's the first point, or when a new motion activity type (i.e. mode) is detected
+    const motionActivity = TranslateToEMissionMotionActivityPoint(point);
+    content.push(motionActivity);
+  }
+  return;
+};
+
+async function uploadPoints(points, user, lastPoint, isLastBatch, force) {
+  const contentToUpload = [];
   const uuidsToDelete = [];
 
   for (
@@ -457,38 +463,41 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
   ) {
     const point = points[indexBuildingRequest];
     uuidsToDelete.push(point.uuid);
-    const prev =
+    const previousPoint =
       indexBuildingRequest === 0 // Handles setting up the case for the first point
-        ? previousPoint // Can be undefined
+        ? lastPoint // Can be undefined
         : points[indexBuildingRequest - 1];
 
-    if (prev == null || prev === undefined) {
+    if (!previousPoint) {
       Log(
         'No previous point found, adding start at ' +
           new Date(1000 * (getTs(point) - 1)) +
           's',
       );
-      AddStartTransitions(content, getTs(point) - 1);
+      AddStartTransitions(contentToUpload, getTs(point) - 1);
     } else {
-      const deltaT = getTs(point) - getTs(prev);
+      const deltaT = getTs(point) - getTs(previousPoint);
       if (deltaT > timeToAddStopTransitions) {
         // If the points are not close enough in time, we need to check that there was significant movement
         Log(
-          'Noticed a break: ' + deltaT + 's at ' + new Date(1000 * getTs(prev)),
+          'Noticed a break: ' +
+            deltaT +
+            's at ' +
+            new Date(1000 * getTs(previousPoint)),
         );
-        const distance = getDistanceFromLatLonInM(prev, point);
+        const distance = getDistanceFromLatLonInM(previousPoint, point);
         if (distance < 300) {
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
           Log(
             'Small distance (' +
               distance +
               'm), adding stop and start at: ' +
-              (getTs(prev) + 180) +
+              (getTs(previousPoint) + 180) +
               ' and ' +
               (getTs(point) - 1),
           );
-          AddStopTransitions(content, getTs(prev) + 180); // 3 min later for now
-          AddStartTransitions(content, getTs(point) - 1);
+          AddStopTransitions(contentToUpload, getTs(previousPoint) + 180); // 3 min later for now
+          AddStartTransitions(contentToUpload, getTs(point) - 1);
         } else {
           Log('Long distance, leaving uninterrupted trip: ' + distance + 'm');
         }
@@ -496,23 +505,24 @@ async function uploadPoints(points, user, previousPoint, isLastBatch, force) {
     }
 
     //Condition de filtered_location:
-    let samePosAsPrev =
-      prev != undefined &&
-      point.coords.longitude == prev.coords.longitude &&
-      point.coords.latitude == prev.coords.latitude;
-    let filtered = !samePosAsPrev && point.coords.accuracy <= 200;
+    const samePosAsPrev =
+      previousPoint &&
+      point.coords.longitude === previousPoint.coords.longitude &&
+      point.coords.latitude === previousPoint.coords.latitude;
+    const filtered = !samePosAsPrev && point.coords.accuracy <= 200;
 
-    AddPoint(content, point, filtered);
+    addPoint(contentToUpload, point, filtered);
+    addMotionActivity(contentToUpload, previousPoint, point);
   }
   if (isLastBatch) {
     // Force a stop transition for the last point
-    const lastPoint = points[points.length - 1];
-    const deltaLastPoint = Date.now() / 1000 - getTs(lastPoint);
+    const lastBatchPoint = points[points.length - 1];
+    const deltaLastPoint = Date.now() / 1000 - getTs(lastBatchPoint);
     Log('Delta last point : ' + deltaLastPoint);
-    AddStopTransitions(content, getTs(lastPoint) + 180);
+    AddStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180);
   }
 
-  await UploadUserCache(content, user, uuidsToDelete, points.at(-1));
+  await UploadUserCache(contentToUpload, user, uuidsToDelete, points.at(-1));
 }
 
 export async function SmartSend(locations, user, {force = true} = {}) {
