@@ -8,8 +8,9 @@ import {Switch, Text, useColorScheme, View} from 'react-native';
 
 const currVersionIterationCounter = 3; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
 const DestroyLocalOnSuccess = true;
-const waitBeforeStopMotionEvent = 11;
-const timeToAddStopTransitions = 300; // Shouldn't have longer breaks without siginificant movement
+const waitBeforeStopMotionEventMin = 10; // Align with openpath: https://github.com/e-mission/e-mission-server/blob/master/emission/analysis/intake/segmentation/trip_segmentation.py#L59
+const timeToAddStopTransitionsSec = 20 * 60; // Shouldn't have longer breaks without siginificant motion
+const maxDistanceDeltaToRestart = 200; // In meters
 const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 const useUniqueDeviceId = false;
@@ -395,7 +396,7 @@ async function uploadWithNoNewPoints(user, force) {
       Log('No previous location either, no upload');
     } else {
       let deltaT = Date.now() / 1000 - getTs(lastPoint);
-      if (deltaT > timeToAddStopTransitions) {
+      if (deltaT > timeToAddStopTransitionsSec) {
         // Note: no problem if we add a stop if there's already one
         Log(
           'Previous location old enough (' +
@@ -477,7 +478,7 @@ async function uploadPoints(points, user, lastPoint, isLastBatch, force) {
       AddStartTransitions(contentToUpload, getTs(point) - 1);
     } else {
       const deltaT = getTs(point) - getTs(previousPoint);
-      if (deltaT > timeToAddStopTransitions) {
+      if (deltaT > timeToAddStopTransitionsSec) {
         // If the points are not close enough in time, we need to check that there was significant movement
         Log(
           'Noticed a break: ' +
@@ -486,16 +487,9 @@ async function uploadPoints(points, user, lastPoint, isLastBatch, force) {
             new Date(1000 * getTs(previousPoint)),
         );
         const distance = getDistanceFromLatLonInM(previousPoint, point);
-        if (distance < 300) {
+        Log('Distance between points : ' + distance);
+        if (distance < maxDistanceDeltaToRestart) {
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
-          Log(
-            'Small distance (' +
-              distance +
-              'm), adding stop and start at: ' +
-              (getTs(previousPoint) + 180) +
-              ' and ' +
-              (getTs(point) - 1),
-          );
           AddStopTransitions(contentToUpload, getTs(previousPoint) + 180); // 3 min later for now
           AddStartTransitions(contentToUpload, getTs(point) - 1);
         } else {
@@ -650,7 +644,7 @@ export async function StartTracking() {
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
       stationaryRadius: 200, // Minimum, but still usually takes 200m
       // Activity Recognition
-      stopTimeout: waitBeforeStopMotionEvent,
+      stopTimeout: waitBeforeStopMotionEventMin,
       // Application config
       debug: false, // <-- enable this hear sounds for background-geolocation life-cycle and notifications
       logLevel: BackgroundGeolocation.LOG_LEVEL_DEBUG,
