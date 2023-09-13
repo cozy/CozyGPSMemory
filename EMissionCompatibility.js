@@ -440,8 +440,6 @@ const addPoint = (content, point, filtered) => {
     content.push(TranslateToEMissionLocationPoint(point));
     content.at(-1).metadata.key = 'background/filtered_location';
   }
-
-  content.push(TranslateToEMissionMotionActivityPoint(point));
 };
 
 const addMotionActivity = (content, previousPoint, point) => {
