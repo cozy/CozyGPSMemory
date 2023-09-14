@@ -1,10 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackgroundGeolocation from 'react-native-background-geolocation';
 import {Platform} from 'react-native';
-import React from 'react';
 import {getUniqueId} from 'react-native-device-info';
-
-import {Switch, Text, useColorScheme, View} from 'react-native';
 
 const currVersionIterationCounter = 3; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
 const DestroyLocalOnSuccess = true;
@@ -33,7 +30,7 @@ const OldStorageAdresses = [
 
 const IdStorageAdress = 'CozyGPSMemory.Id';
 const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
-const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
+export const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
 const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded';
 const versionIterationCounterStorageAdress =
   'CozyGPSMemory.VersionIterationCounter';
@@ -150,7 +147,7 @@ export async function ClearOldCozyGPSMemoryStorage() {
   await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since storage was updated
 }
 
-async function CheckForUpdateActions() {
+export async function CheckForUpdateActions() {
   const lastVersion = await _getVersionIterationCounter();
   if (lastVersion != currVersionIterationCounter) {
     Log(
@@ -675,57 +672,4 @@ export async function StopTracking() {
   } catch {
     return false;
   }
-}
-
-export function GeolocationSwitch() {
-  const [enabled, setEnabled] = React.useState(false);
-  const Toggle = () => {
-    if (!enabled) {
-      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'true');
-      StartTracking();
-    } else {
-      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
-      StopTracking();
-    }
-    setEnabled(previousState => !previousState);
-  };
-
-  React.useEffect(() => {
-    const checkAsync = async () => {
-      const value = await AsyncStorage.getItem(
-        ShouldBeTrackingFlagStorageAdress,
-      );
-      if (value !== undefined && value !== null) {
-        if (value == 'true') {
-          setEnabled(true);
-          StartTracking();
-        } else {
-          setEnabled(false);
-          StopTracking();
-        }
-      } else {
-        setEnabled(false);
-        StopTracking();
-        AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
-      }
-    };
-    checkAsync();
-
-    /// Handle update effects
-    CheckForUpdateActions();
-  }, []);
-
-  return (
-    <View style={{alignItems: 'center', padding: 50}}>
-      <Text
-        style={{
-          fontSize: 36,
-          padding: 10,
-          color: useColorScheme() === 'dark' ? '#ffffff' : '#000000',
-        }}>
-        Tracking
-      </Text>
-      <Switch value={enabled} onValueChange={Toggle} />
-    </View>
-  );
 }

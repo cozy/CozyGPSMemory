@@ -16,8 +16,10 @@ import {
   TextInput,
   useColorScheme,
   View,
+  Switch,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
@@ -26,12 +28,68 @@ import {
   _getId,
   ClearAllCozyGPSMemoryData,
   UpdateId,
-  GeolocationSwitch,
   getAllLogs,
   sendLogFile,
+  StartTracking,
+  StopTracking,
+  CheckForUpdateActions,
+  ShouldBeTrackingFlagStorageAdress,
 } from './EMissionCompatibility.js';
 
 const devMode = true;
+
+function GeolocationSwitch() {
+  const [enabled, setEnabled] = React.useState(false);
+  const Toggle = () => {
+    if (!enabled) {
+      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'true');
+      StartTracking();
+    } else {
+      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+      StopTracking();
+    }
+    setEnabled(previousState => !previousState);
+  };
+
+  React.useEffect(() => {
+    const checkAsync = async () => {
+      const value = await AsyncStorage.getItem(
+        ShouldBeTrackingFlagStorageAdress,
+      );
+      if (value !== undefined && value !== null) {
+        if (value == 'true') {
+          setEnabled(true);
+          StartTracking();
+        } else {
+          setEnabled(false);
+          StopTracking();
+        }
+      } else {
+        setEnabled(false);
+        StopTracking();
+        AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+      }
+    };
+    checkAsync();
+
+    /// Handle update effects
+    CheckForUpdateActions();
+  }, []);
+
+  return (
+    <View style={{alignItems: 'center', padding: 50}}>
+      <Text
+        style={{
+          fontSize: 36,
+          padding: 10,
+          color: useColorScheme() === 'dark' ? '#ffffff' : '#000000',
+        }}>
+        Tracking
+      </Text>
+      <Switch value={enabled} onValueChange={Toggle} />
+    </View>
+  );
+}
 
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
