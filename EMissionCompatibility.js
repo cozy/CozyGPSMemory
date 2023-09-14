@@ -1,17 +1,17 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import BackgroundGeolocation from 'react-native-background-geolocation';
-import {Platform} from 'react-native';
-import {getUniqueId} from 'react-native-device-info';
+/* eslint-disable no-console */
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import BackgroundGeolocation from 'react-native-background-geolocation'
+import { getUniqueId } from 'react-native-device-info'
 
-const currVersionIterationCounter = 3; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
-const DestroyLocalOnSuccess = true;
-const waitBeforeStopMotionEventMin = 10; // Align with openpath: https://github.com/e-mission/e-mission-server/blob/master/emission/analysis/intake/segmentation/trip_segmentation.py#L59
-const timeToAddStopTransitionsSec = 20 * 60; // Shouldn't have longer breaks without siginificant motion
-const maxDistanceDeltaToRestart = 200; // In meters
-const serverURL = 'https://openpath.cozycloud.cc';
-const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
-const useUniqueDeviceId = false;
-const heavyLogs = false; // Log points, motion changes...
+const currVersionIterationCounter = 3 // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
+const DestroyLocalOnSuccess = true
+const waitBeforeStopMotionEventMin = 10 // Align with openpath: https://github.com/e-mission/e-mission-server/blob/master/emission/analysis/intake/segmentation/trip_segmentation.py#L59
+const timeToAddStopTransitionsSec = 20 * 60 // Shouldn't have longer breaks without siginificant motion
+const maxDistanceDeltaToRestart = 200 // In meters
+const serverURL = 'https://openpath.cozycloud.cc'
+const maxPointsPerBatch = 300 // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
+const useUniqueDeviceId = false
+const heavyLogs = false // Log points, motion changes...
 
 // Storage adresses used by AsyncStorage
 // Note: if changed, devices upgrading from older build will keep the old ones unless we take care to delete them
@@ -25,146 +25,147 @@ const OldStorageAdresses = [
   'CozyGPSMemory.UploadHistory',
   'CozyGPSMemory.Stops',
   'CozyGPSMemory.AutoUploadFlag',
-  'CozyGPSMemory.Log',
-];
+  'CozyGPSMemory.Log'
+]
 
-const IdStorageAdress = 'CozyGPSMemory.Id';
-const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload';
-export const ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag';
-const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded';
+const IdStorageAdress = 'CozyGPSMemory.Id'
+const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload'
+export const ShouldBeTrackingFlagStorageAdress =
+  'CozyGPSMemory.ShouldBeTrackingFlag'
+const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded'
 const versionIterationCounterStorageAdress =
-  'CozyGPSMemory.VersionIterationCounter';
+  'CozyGPSMemory.VersionIterationCounter'
 
-const Logger = BackgroundGeolocation.logger;
+const Logger = BackgroundGeolocation.logger
 
 async function _updateVersionIterationCounter() {
   await AsyncStorage.setItem(
     versionIterationCounterStorageAdress,
-    currVersionIterationCounter.toString(),
-  );
-  Log('Set versionIterationCounter to: ' + currVersionIterationCounter);
+    currVersionIterationCounter.toString()
+  )
+  Log('Set versionIterationCounter to: ' + currVersionIterationCounter)
 }
 
 async function _getVersionIterationCounter() {
   return parseInt(
-    (await AsyncStorage.getItem(versionIterationCounterStorageAdress)) | '0',
-  );
+    (await AsyncStorage.getItem(versionIterationCounterStorageAdress)) | '0'
+  )
 }
 
 async function _getLastPointUploaded() {
-  return JSON.parse(await AsyncStorage.getItem(LastPointUploadedAdress));
+  return JSON.parse(await AsyncStorage.getItem(LastPointUploadedAdress))
 }
 
 async function _setLastPointUploaded(value) {
-  await AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value));
+  await AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value))
 }
 
 export async function getAllLogs() {
-  return Logger.getLog();
+  return Logger.getLog()
 }
 
 export function sendLogFile() {
-  return Logger.emailLog('');
+  return Logger.emailLog('')
 }
 
 export function Log(message) {
-  console.log(message);
-  Logger.debug(message);
+  console.log(message)
+  Logger.debug(message)
 }
 
 async function _storeFlagFailUpload(Flag) {
   try {
     await AsyncStorage.setItem(
       FlagFailUploadStorageAdress,
-      Flag ? 'true' : 'false',
-    );
+      Flag ? 'true' : 'false'
+    )
   } catch (error) {
-    Log('Error while storing FlagFailUpload:' + error.toString());
-    throw error;
+    Log('Error while storing FlagFailUpload:' + error.toString())
+    throw error
   }
 }
 
 export async function _getFlagFailUpload() {
   try {
-    let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress);
+    let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress)
     if (value == undefined) {
-      await _storeFlagFailUpload(false);
-      return false;
+      await _storeFlagFailUpload(false)
+      return false
     } else {
-      return value == 'true';
+      return value == 'true'
     }
   } catch (error) {
-    Log('Error while getting FlagFailUpload:' + error.toString());
-    throw error;
+    Log('Error while getting FlagFailUpload:' + error.toString())
+    throw error
   }
 }
 
 export async function _storeId(Id) {
   try {
-    await AsyncStorage.setItem(IdStorageAdress, Id);
+    await AsyncStorage.setItem(IdStorageAdress, Id)
   } catch (error) {
-    throw error;
+    throw error
   }
 }
 
 export async function _getId() {
   try {
-    let value = await AsyncStorage.getItem(IdStorageAdress);
+    let value = await AsyncStorage.getItem(IdStorageAdress)
     if (value == undefined) {
-      Log('No current Id, generating a new one...');
+      Log('No current Id, generating a new one...')
       value = useUniqueDeviceId
         ? await getUniqueId()
-        : Math.random().toString(36).replace('0.', '');
-      await _storeId(value); // random Id or device Id depending on config
+        : Math.random().toString(36).replace('0.', '')
+      await _storeId(value) // random Id or device Id depending on config
       if (value != (await AsyncStorage.getItem(IdStorageAdress))) {
-        throw new Error("New Id couldn't be stored"); // We make sure it is stored
+        throw new Error("New Id couldn't be stored") // We make sure it is stored
       }
-      Log('Set Id to: ' + value);
+      Log('Set Id to: ' + value)
     }
 
-    return value;
+    return value
   } catch (error) {
-    Log('Error while getting Id:' + error.toString());
-    throw error;
+    Log('Error while getting Id:' + error.toString())
+    throw error
   }
 }
 
 export async function ClearAllCozyGPSMemoryData() {
-  await BackgroundGeolocation.destroyLocations();
+  await BackgroundGeolocation.destroyLocations()
   await AsyncStorage.multiRemove([
     IdStorageAdress,
     FlagFailUploadStorageAdress,
     LastPointUploadedAdress,
-    versionIterationCounterStorageAdress,
-  ]);
+    versionIterationCounterStorageAdress
+  ])
   // Only exception : ShouldBeTrackingFlagStorageAdress, don't know the effects on the switch and would not feel natural anyway
-  await ClearOldCozyGPSMemoryStorage();
-  await BackgroundGeolocation.logger.destroyLog();
-  Log('Everything cleared');
+  await ClearOldCozyGPSMemoryStorage()
+  await BackgroundGeolocation.logger.destroyLog()
+  Log('Everything cleared')
 }
 
 export async function ClearOldCozyGPSMemoryStorage() {
-  await AsyncStorage.multiRemove(OldStorageAdresses); // Just to clean up devices upgrading from older builds since storage was updated
+  await AsyncStorage.multiRemove(OldStorageAdresses) // Just to clean up devices upgrading from older builds since storage was updated
 }
 
 export async function CheckForUpdateActions() {
-  const lastVersion = await _getVersionIterationCounter();
+  const lastVersion = await _getVersionIterationCounter()
   if (lastVersion != currVersionIterationCounter) {
     Log(
       'Found last version: ' +
         lastVersion +
         ', current: ' +
-        currVersionIterationCounter,
-    );
-    await ClearOldCozyGPSMemoryStorage();
-    Log('Cleared old storages');
+        currVersionIterationCounter
+    )
+    await ClearOldCozyGPSMemoryStorage()
+    Log('Cleared old storages')
     if (lastVersion < 2) {
-      await ClearOldCozyGPSMemoryStorage();
+      await ClearOldCozyGPSMemoryStorage()
       Log(
-        'Cleared old storage adresses because we may be updating from an old version',
-      );
+        'Cleared old storage adresses because we may be updating from an old version'
+      )
     }
-    _updateVersionIterationCounter();
+    _updateVersionIterationCounter()
   }
 }
 
@@ -172,28 +173,26 @@ async function CreateUser(user) {
   let response = await fetch(serverURL + '/profile/create', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify({user: user}),
-  });
+    body: JSON.stringify({ user: user })
+  })
   if (!response.ok) {
-    Log('Error creating user: ' + response.status + ' ' + response.statusText);
-    throw new Error('FAILED_EMISSION_USER_CREATION'); // Could be no Internet, offline server or unknown issue. Won't trigger if user already exists.
+    Log('Error creating user: ' + response.status + ' ' + response.statusText)
+    throw new Error('FAILED_EMISSION_USER_CREATION') // Could be no Internet, offline server or unknown issue. Won't trigger if user already exists.
   } else {
-    const jsonTokenResponse = await response.json();
-    Log('Success creating user ' + user + ', UUID: ' + jsonTokenResponse.uuid);
+    const jsonTokenResponse = await response.json()
+    Log('Success creating user ' + user + ', UUID: ' + jsonTokenResponse.uuid)
   }
 }
 
 function parseISOString(ISOString) {
-  let b = ISOString.split(/\D+/);
-  return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]));
+  let b = ISOString.split(/\D+/)
+  return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]))
 }
 
 function TranslateToEMissionLocationPoint(location_point) {
-  let ts = Math.floor(
-    parseISOString(location_point.timestamp).getTime() / 1000,
-  );
+  let ts = Math.floor(parseISOString(location_point.timestamp).getTime() / 1000)
   return {
     data: {
       accuracy: location_point.coords.accuracy,
@@ -205,7 +204,7 @@ function TranslateToEMissionLocationPoint(location_point) {
       longitude: location_point.coords.longitude,
       sensed_speed: location_point.coords.speed,
       ts: ts + 0.1, // It's silly, but some rare operations of e-mission will take a timestamp without a decimal point as an integer and crash. Since it would be a hard crash, the pipeline will not attempt again for this user so the user would never get new tracks without intervention. This was the simplest way to insure that JSON.stringify() will leave a decimal point.
-      vaccuracy: location_point.coords.altitude_accuracy,
+      vaccuracy: location_point.coords.altitude_accuracy
     },
     metadata: {
       platform: 'ios',
@@ -213,16 +212,16 @@ function TranslateToEMissionLocationPoint(location_point) {
       time_zone: 'UTC',
       key: 'background/location',
       read_ts: 0,
-      type: 'sensor-data',
-    },
-  };
+      type: 'sensor-data'
+    }
+  }
 }
 
 function TranslateToEMissionMotionActivityPoint(location) {
-  let ts = Math.floor(parseISOString(location.timestamp).getTime() / 1000);
-  Log('Activity type : ' + location.activity.type);
+  let ts = Math.floor(parseISOString(location.timestamp).getTime() / 1000)
+  Log('Activity type : ' + location.activity.type)
   if (location.activity.type === 'unknown') {
-    Log('Unknown activity at: ' + location.timestamp);
+    Log('Unknown activity at: ' + location.timestamp)
   }
   // See: https://transistorsoft.github.io/react-native-background-geolocation/interfaces/motionactivity.html#type
   return {
@@ -242,7 +241,7 @@ function TranslateToEMissionMotionActivityPoint(location) {
           ? 'high'
           : location.activity.confidence > 50
           ? 'medium'
-          : 'low',
+          : 'low'
     },
     metadata: {
       write_ts: ts + 0.2,
@@ -250,28 +249,28 @@ function TranslateToEMissionMotionActivityPoint(location) {
       platform: 'ios',
       key: 'background/motion_activity',
       read_ts: 0,
-      type: 'sensor-data',
-    },
-  };
+      type: 'sensor-data'
+    }
+  }
 }
 
 export async function UpdateId(newId) {
   // If there are still non-uploaded locations, it should be handled before changing the Id or they will be sent with the new one
-  Log('Updating Id to ' + newId);
+  Log('Updating Id to ' + newId)
 
   if (newId.length > 2 && newId != (await _getId())) {
-    await _storeId(newId);
+    await _storeId(newId)
     if (newId != (await _getId())) {
-      return 'FAIL_STORING_ID';
+      return 'FAIL_STORING_ID'
     }
     try {
-      await CreateUser(newId);
-      return 'SUCCESS_STORING_SUCCESS_CREATING';
+      await CreateUser(newId)
+      return 'SUCCESS_STORING_SUCCESS_CREATING'
     } catch (error) {
-      return 'SUCCESS_STORING_FAIL_CREATING';
+      return 'SUCCESS_STORING_FAIL_CREATING'
     }
   } else {
-    return 'SAME_ID_OR_INVALID_ID';
+    return 'SAME_ID_OR_INVALID_ID'
   }
 }
 
@@ -280,7 +279,7 @@ function Transition(state, transition, transition_ts) {
     data: {
       currState: state,
       transition: transition,
-      ts: transition_ts,
+      ts: transition_ts
     },
     metadata: {
       platform: 'ios',
@@ -288,65 +287,65 @@ function Transition(state, transition, transition_ts) {
       time_zone: 'UTC',
       key: 'statemachine/transition',
       read_ts: 0,
-      type: 'message',
-    },
-  };
+      type: 'message'
+    }
+  }
 }
 
 // Add start transitions, within 0.1s of given ts
 function AddStartTransitions(addedTo, ts) {
   addedTo.push(
-    Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01),
-  );
+    Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01)
+  )
   addedTo.push(
-    Transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.02),
-  );
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.03));
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_RESTARTED', ts + 0.04));
+    Transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.02)
+  )
+  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.03))
+  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_RESTARTED', ts + 0.04))
 }
 
 // Add stop transitions, within 0.1s of given ts
 function AddStopTransitions(addedTo, ts) {
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01));
+  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01))
   addedTo.push(
-    Transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.02),
-  );
+    Transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.02)
+  )
   addedTo.push(
-    Transition('STATE_ONGOING_TRIP', 'T_END_TRIP_TRACKING', ts + 0.03),
-  );
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_ENDED', ts + 0.04));
-  addedTo.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.05));
+    Transition('STATE_ONGOING_TRIP', 'T_END_TRIP_TRACKING', ts + 0.03)
+  )
+  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_ENDED', ts + 0.04))
+  addedTo.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.05))
   addedTo.push(
-    Transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.06),
-  );
+    Transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.06)
+  )
 }
 
 function getTs(location) {
-  return parseISOString(location.timestamp).getTime() / 1000;
+  return parseISOString(location.timestamp).getTime() / 1000
 }
 
 async function UploadUserCache(
   content,
   user,
   uuidsToDeleteOnSuccess,
-  lastPointToSave = undefined,
+  lastPointToSave = undefined
 ) {
-  Log('Uploading content to usercache...');
+  Log('Uploading content to usercache...')
   let JsonRequest = {
     user: user,
-    phone_to_server: content,
-  };
+    phone_to_server: content
+  }
 
   let response = await fetch(serverURL + '/usercache/put', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(JsonRequest),
-  });
+    body: JSON.stringify(JsonRequest)
+  })
 
   if (heavyLogs) {
-    Log('Uploaded: ' + JSON.stringify(JsonRequest));
+    Log('Uploaded: ' + JSON.stringify(JsonRequest))
   }
 
   if (!response.ok) {
@@ -355,228 +354,228 @@ async function UploadUserCache(
         'Error in request response:',
         response.status,
         response.statusText,
-        await response.text(),
-      ),
-    );
+        await response.text()
+      )
+    )
   } else {
-    Log('Success uploading');
+    Log('Success uploading')
     if (lastPointToSave != undefined) {
-      await _setLastPointUploaded(lastPointToSave);
-      Log('Saved last point');
+      await _setLastPointUploaded(lastPointToSave)
+      Log('Saved last point')
     } else {
-      Log('No last point to save');
+      Log('No last point to save')
     }
     if (DestroyLocalOnSuccess && uuidsToDeleteOnSuccess.length > 0) {
-      Log('Removing local location records that were just uploaded...');
+      Log('Removing local location records that were just uploaded...')
       for (
         let deleteIndex = 0;
         deleteIndex < uuidsToDeleteOnSuccess.length;
         deleteIndex++
       ) {
-        const element = uuidsToDeleteOnSuccess[deleteIndex];
-        await BackgroundGeolocation.destroyLocation(element);
+        const element = uuidsToDeleteOnSuccess[deleteIndex]
+        await BackgroundGeolocation.destroyLocation(element)
       }
-      Log('Done removing local locations');
+      Log('Done removing local locations')
     }
   }
 }
 
 async function uploadWithNoNewPoints(user, force) {
-  const lastPoint = await _getLastPointUploaded();
-  const content = [];
+  const lastPoint = await _getLastPointUploaded()
+  const content = []
 
   if (force) {
-    AddStopTransitions(content, Date.now() / 1000);
-    await UploadUserCache(content, user, []);
+    AddStopTransitions(content, Date.now() / 1000)
+    await UploadUserCache(content, user, [])
   } else {
     if (lastPoint == undefined) {
-      Log('No previous location either, no upload');
+      Log('No previous location either, no upload')
     } else {
-      let deltaT = Date.now() / 1000 - getTs(lastPoint);
+      let deltaT = Date.now() / 1000 - getTs(lastPoint)
       if (deltaT > timeToAddStopTransitionsSec) {
         // Note: no problem if we add a stop if there's already one
         Log(
           'Previous location old enough (' +
             deltaT +
             's ago), posting stop transitions at ' +
-            new Date(1000 * getTs(lastPoint)),
-        );
-        AddStopTransitions(content, getTs(lastPoint));
-        await UploadUserCache(content, user, []);
-        Log('Finished upload of stop transtitions');
+            new Date(1000 * getTs(lastPoint))
+        )
+        AddStopTransitions(content, getTs(lastPoint))
+        await UploadUserCache(content, user, [])
+        Log('Finished upload of stop transtitions')
       } else {
-        Log('Previous location too recent (' + deltaT + 's ago), no upload');
+        Log('Previous location too recent (' + deltaT + 's ago), no upload')
       }
     }
   }
 }
 
 function deg2rad(deg) {
-  return deg * (Math.PI / 180);
+  return deg * (Math.PI / 180)
 }
 
 function getDistanceFromLatLonInM(point1, point2) {
-  const R = 6371; // Radius of the earth in km
-  const dLat = deg2rad(point2.coords.latitude - point1.coords.latitude); // deg2rad below
-  const dLon = deg2rad(point2.coords.longitude - point1.coords.longitude);
+  const R = 6371 // Radius of the earth in km
+  const dLat = deg2rad(point2.coords.latitude - point1.coords.latitude) // deg2rad below
+  const dLon = deg2rad(point2.coords.longitude - point1.coords.longitude)
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(deg2rad(point1.coords.latitude)) *
       Math.cos(deg2rad(point2.coords.latitude)) *
       Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const d = R * c; // Distance in km
-  return d * 1000;
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const d = R * c // Distance in km
+  return d * 1000
 }
 
 const addPoint = (content, point, filtered) => {
-  content.push(TranslateToEMissionLocationPoint(point));
+  content.push(TranslateToEMissionLocationPoint(point))
 
   if (filtered) {
-    content.push(TranslateToEMissionLocationPoint(point));
-    content.at(-1).metadata.key = 'background/filtered_location';
+    content.push(TranslateToEMissionLocationPoint(point))
+    content.at(-1).metadata.key = 'background/filtered_location'
   }
-};
+}
 
 const addMotionActivity = (content, previousPoint, point) => {
   if (!previousPoint || previousPoint.activity?.type !== point.activity?.type) {
     // Add new activity type when it's the first point, or when a new motion activity type (i.e. mode) is detected
-    const motionActivity = TranslateToEMissionMotionActivityPoint(point);
-    content.push(motionActivity);
+    const motionActivity = TranslateToEMissionMotionActivityPoint(point)
+    content.push(motionActivity)
   }
-  return;
-};
+  return
+}
 
 async function uploadPoints(points, user, lastPoint, isLastBatch, force) {
-  const contentToUpload = [];
-  const uuidsToDelete = [];
+  const contentToUpload = []
+  const uuidsToDelete = []
 
   for (
     let indexBuildingRequest = 0;
     indexBuildingRequest < points.length;
     indexBuildingRequest++
   ) {
-    const point = points[indexBuildingRequest];
-    uuidsToDelete.push(point.uuid);
+    const point = points[indexBuildingRequest]
+    uuidsToDelete.push(point.uuid)
     const previousPoint =
       indexBuildingRequest === 0 // Handles setting up the case for the first point
         ? lastPoint // Can be undefined
-        : points[indexBuildingRequest - 1];
+        : points[indexBuildingRequest - 1]
 
     if (!previousPoint) {
       Log(
         'No previous point found, adding start at ' +
           new Date(1000 * (getTs(point) - 1)) +
-          's',
-      );
-      AddStartTransitions(contentToUpload, getTs(point) - 1);
+          's'
+      )
+      AddStartTransitions(contentToUpload, getTs(point) - 1)
     } else {
-      const deltaT = getTs(point) - getTs(previousPoint);
+      const deltaT = getTs(point) - getTs(previousPoint)
       if (deltaT > timeToAddStopTransitionsSec) {
         // If the points are not close enough in time, we need to check that there was significant movement
         Log(
           'Noticed a break: ' +
             deltaT +
             's at ' +
-            new Date(1000 * getTs(previousPoint)),
-        );
-        const distance = getDistanceFromLatLonInM(previousPoint, point);
-        Log('Distance between points : ' + distance);
+            new Date(1000 * getTs(previousPoint))
+        )
+        const distance = getDistanceFromLatLonInM(previousPoint, point)
+        Log('Distance between points : ' + distance)
         if (distance < maxDistanceDeltaToRestart) {
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
-          AddStopTransitions(contentToUpload, getTs(previousPoint) + 180); // 3 min later for now
-          AddStartTransitions(contentToUpload, getTs(point) - 1);
+          AddStopTransitions(contentToUpload, getTs(previousPoint) + 180) // 3 min later for now
+          AddStartTransitions(contentToUpload, getTs(point) - 1)
         } else {
-          Log('Long distance, leaving uninterrupted trip: ' + distance + 'm');
+          Log('Long distance, leaving uninterrupted trip: ' + distance + 'm')
         }
       }
     }
 
-    //Condition de filtered_location:
+    // Condition de filtered_location:
     const samePosAsPrev =
       previousPoint &&
       point.coords.longitude === previousPoint.coords.longitude &&
-      point.coords.latitude === previousPoint.coords.latitude;
-    const filtered = !samePosAsPrev && point.coords.accuracy <= 200;
+      point.coords.latitude === previousPoint.coords.latitude
+    const filtered = !samePosAsPrev && point.coords.accuracy <= 200
 
-    addPoint(contentToUpload, point, filtered);
-    addMotionActivity(contentToUpload, previousPoint, point);
+    addPoint(contentToUpload, point, filtered)
+    addMotionActivity(contentToUpload, previousPoint, point)
   }
   if (isLastBatch) {
     // Force a stop transition for the last point
-    const lastBatchPoint = points[points.length - 1];
-    const deltaLastPoint = Date.now() / 1000 - getTs(lastBatchPoint);
-    Log('Delta last point : ' + deltaLastPoint);
-    AddStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180);
+    const lastBatchPoint = points[points.length - 1]
+    const deltaLastPoint = Date.now() / 1000 - getTs(lastBatchPoint)
+    Log('Delta last point : ' + deltaLastPoint)
+    AddStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
   }
 
-  await UploadUserCache(contentToUpload, user, uuidsToDelete, points.at(-1));
+  await UploadUserCache(contentToUpload, user, uuidsToDelete, points.at(-1))
 }
 
-export async function SmartSend(locations, user, {force = true} = {}) {
-  await CreateUser(user); // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
+export async function SmartSend(locations, user, { force = true } = {}) {
+  await CreateUser(user) // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
 
   if (locations.length === 0) {
-    Log('No new locations');
-    await uploadWithNoNewPoints(user, force);
+    Log('No new locations')
+    await uploadWithNoNewPoints(user, force)
   } else {
-    Log('Found pending locations, uploading them');
-    let batchCounter = 0;
+    Log('Found pending locations, uploading them')
+    let batchCounter = 0
     for (let index = 0; index < locations.length; index += maxPointsPerBatch) {
       Log(
         'Creating batch ' +
           (batchCounter + 1) +
           '/' +
-          (1 + locations.length / maxPointsPerBatch).toFixed(0),
-      ); // Probably imperfect, TO DO: check formula
+          (1 + locations.length / maxPointsPerBatch).toFixed(0)
+      ) // Probably imperfect, TO DO: check formula
       await uploadPoints(
         locations.slice(index, index + maxPointsPerBatch),
         user,
         index === 0 ? await _getLastPointUploaded() : locations[index - 1],
         index + maxPointsPerBatch >= locations.length,
-        force,
-      );
+        force
+      )
 
-      batchCounter++;
+      batchCounter++
     }
 
-    Log('Uploaded last batch');
+    Log('Uploaded last batch')
   }
 }
 
-export async function UploadData({untilTs = 0, force = false} = {}) {
+export async function UploadData({ untilTs = 0, force = false } = {}) {
   // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
-  Log('Starting upload process' + (force ? ', forced' : ''));
+  Log('Starting upload process' + (force ? ', forced' : ''))
 
   try {
-    const locations = await BackgroundGeolocation.getLocations();
-    let filteredLocations;
+    const locations = await BackgroundGeolocation.getLocations()
+    let filteredLocations
     // Filter out locations that might tracked afterwards the trigger event
     if (untilTs > 0) {
-      filteredLocations = locations.filter(loc => loc.timestamp <= untilTs);
+      filteredLocations = locations.filter(loc => loc.timestamp <= untilTs)
     } else {
-      filteredLocations = locations;
+      filteredLocations = locations
     }
     if (filteredLocations.length < locations.length) {
-      Log('Locations filtered: ' + filteredLocations.length - locations.length);
+      Log('Locations filtered: ' + filteredLocations.length - locations.length)
     }
 
-    let user = await _getId();
-    Log('Using Id: ' + user);
+    let user = await _getId()
+    Log('Using Id: ' + user)
 
     try {
-      await SmartSend(filteredLocations, user, {force});
-      await _storeFlagFailUpload(false);
-      return true;
+      await SmartSend(filteredLocations, user, { force })
+      await _storeFlagFailUpload(false)
+      return true
     } catch (message) {
-      Log('Error trying to send data: ' + message);
-      await _storeFlagFailUpload(true);
-      return false;
+      Log('Error trying to send data: ' + message)
+      await _storeFlagFailUpload(true)
+      return false
     }
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
 }
 
@@ -595,45 +594,45 @@ const onProviderChange = BackgroundGeolocation.onProviderChange(async (event) =>
 */
 
 export async function handleMotionChange(event) {
-  Log('[MOTION CHANGE] - ' + JSON.stringify(event));
+  Log('[MOTION CHANGE] - ' + JSON.stringify(event))
 
-  const isStationary = !event.isMoving || event.activity?.still; // The isMoving param does not seem reliable with Android headless mode
+  const isStationary = !event.isMoving || event.activity?.still // The isMoving param does not seem reliable with Android headless mode
   if (isStationary) {
     // Get the event timestamp to filter out locations tracked after this
-    const stationaryTs = event.location?.timestamp;
-    Log('Auto uploading from stop');
-    await UploadData({untilTs: stationaryTs});
+    const stationaryTs = event.location?.timestamp
+    Log('Auto uploading from stop')
+    await UploadData({ untilTs: stationaryTs })
   }
 }
 
 export async function handleConnectivityChange(event) {
-  Log('[CONNECTIVITY CHANGE] - ' + JSON.stringify(event));
+  Log('[CONNECTIVITY CHANGE] - ' + JSON.stringify(event))
 
   // Does not work with iOS emulator, event.connected is always false
   if (event.connected && (await _getFlagFailUpload())) {
-    Log('Auto uploading from reconnection and failed last attempt');
-    await UploadData();
+    Log('Auto uploading from reconnection and failed last attempt')
+    await UploadData()
   }
 }
 
 // Register on motion change
 BackgroundGeolocation.onMotionChange(async event => {
-  Log('Enter onMotion change event');
-  return handleMotionChange(event);
-});
+  Log('Enter onMotion change event')
+  return handleMotionChange(event)
+})
 
 BackgroundGeolocation.onConnectivityChange(async event => {
-  return handleConnectivityChange(event);
-});
+  return handleConnectivityChange(event)
+})
 
 export async function StartTracking() {
   try {
-    Log('Starting');
+    Log('Starting')
 
     await BackgroundGeolocation.ready({
       // Geolocation Config
       desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-      showsBackgroundLocationIndicator: false, //Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
+      showsBackgroundLocationIndicator: false, // Displays a blue pill on the iOS status bar when the location services are in use in the background (if the app doesn't have 'always' permission, the blue pill will always appear when location services are in use while the app isn't focused)
       distanceFilter: 20,
       elasticityMultiplier: 3,
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
@@ -649,27 +648,27 @@ export async function StartTracking() {
       batchSync: false, // <-- [Default: false] Set true to sync locations to server in a single HTTP request.
       autoSync: false, // <-- [Default: true] Set true to sync each location to server as it arrives.
       stopOnTerminate: false, // Allow the background-service to continue tracking when user closes the app, for Android. Maybe also useful for ios https://transistorsoft.github.io/react-native-background-geolocation/interfaces/config.html#stoponterminate
-      enableHeadless: true,
-    });
-    await BackgroundGeolocation.start();
+      enableHeadless: true
+    })
+    await BackgroundGeolocation.start()
 
-    return true;
+    return true
   } catch {
-    return false;
+    return false
   }
 }
 
 export async function StopTracking() {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
-      await BackgroundGeolocation.stop();
-      Log('Turned off tracking, uploading...');
-      await UploadData({force: true}); // Forced end, but if fails no current solution (won't retry until turned back on)
+      await BackgroundGeolocation.stop()
+      Log('Turned off tracking, uploading...')
+      await UploadData({ force: true }) // Forced end, but if fails no current solution (won't retry until turned back on)
     } else {
-      console.log('Already off');
+      console.log('Already off')
     }
-    return true;
+    return true
   } catch {
-    return false;
+    return false
   }
 }
