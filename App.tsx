@@ -24,15 +24,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import {
-  UploadData,
+  uploadData,
   getId,
-  ClearAllCozyGPSMemoryData,
-  UpdateId,
+  clearAllCozyGPSMemoryData,
+  updateId,
   getAllLogs,
   sendLogFile,
-  StartTracking,
-  StopTracking,
-  CheckForUpdateActions,
+  startTracking,
+  stopTracking,
+  checkForUpdateActions,
   ShouldBeTrackingFlagStorageAdress,
 } from './EMissionCompatibility.js';
 
@@ -43,10 +43,10 @@ function GeolocationSwitch() {
   const Toggle = () => {
     if (!enabled) {
       AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'true');
-      StartTracking();
+      startTracking();
     } else {
       AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
-      StopTracking();
+      stopTracking();
     }
     setEnabled(previousState => !previousState);
   };
@@ -59,21 +59,21 @@ function GeolocationSwitch() {
       if (value !== undefined && value !== null) {
         if (value == 'true') {
           setEnabled(true);
-          StartTracking();
+          startTracking();
         } else {
           setEnabled(false);
-          StopTracking();
+          stopTracking();
         }
       } else {
         setEnabled(false);
-        StopTracking();
+        stopTracking();
         AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
       }
     };
     checkAsync();
 
     /// Handle update effects
-    CheckForUpdateActions();
+    checkForUpdateActions();
   }, []);
 
   return (
@@ -105,7 +105,7 @@ function App(): JSX.Element {
     setIdInputPopupVisible(true);
   };
   const ForceUploadMobility = async () => {
-    if (await UploadData(true)) {
+    if (await uploadData(true)) {
       MakePopup('✅ All mobility measures uploaded!');
     } else {
       MakePopup('❌ There are still local positions');
@@ -145,8 +145,8 @@ function App(): JSX.Element {
     setPopUpVisible(true);
   }
 
-  async function UpdateIdFromButton(newId: string) {
-    let result = await UpdateId(newId);
+  async function updateIdFromButton(newId: string) {
+    let result = await updateId(newId);
     switch (result) {
       case 'SUCCESS_STORING_SUCCESS_CREATING':
         MakePopup('✅ Id successfully updated');
@@ -234,7 +234,7 @@ function App(): JSX.Element {
         <Button
           onPress={async function () {
             try {
-              await ClearAllCozyGPSMemoryData();
+              await clearAllCozyGPSMemoryData();
               MakePopup('Deleted everything');
             } catch (error) {
               MakePopup("Couldn't purge\n" + error);
@@ -280,7 +280,7 @@ function App(): JSX.Element {
                 title="Validate"
                 onPress={async function () {
                   closeIdInputPopup();
-                  UpdateIdFromButton(IdBoxText);
+                  updateIdFromButton(IdBoxText);
                 }}
               />
             </View>

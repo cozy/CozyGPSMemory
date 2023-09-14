@@ -126,7 +126,7 @@ export const getId = async () => {
   }
 }
 
-export const ClearAllCozyGPSMemoryData = async () => {
+export const clearAllCozyGPSMemoryData = async () => {
   await BackgroundGeolocation.destroyLocations()
   await AsyncStorage.multiRemove([
     IdStorageAdress,
@@ -135,16 +135,16 @@ export const ClearAllCozyGPSMemoryData = async () => {
     versionIterationCounterStorageAdress
   ])
   // Only exception : ShouldBeTrackingFlagStorageAdress, don't know the effects on the switch and would not feel natural anyway
-  await ClearOldCozyGPSMemoryStorage()
+  await clearOldCozyGPSMemoryStorage()
   await BackgroundGeolocation.logger.destroyLog()
   Log('Everything cleared')
 }
 
-export const ClearOldCozyGPSMemoryStorage = async () => {
+export const clearOldCozyGPSMemoryStorage = async () => {
   await AsyncStorage.multiRemove(OldStorageAdresses) // Just to clean up devices upgrading from older builds since storage was updated
 }
 
-export const CheckForUpdateActions = async () => {
+export const checkForUpdateActions = async () => {
   const lastVersion = await getVersionIterationCounter()
   if (lastVersion != currVersionIterationCounter) {
     Log(
@@ -153,10 +153,10 @@ export const CheckForUpdateActions = async () => {
         ', current: ' +
         currVersionIterationCounter
     )
-    await ClearOldCozyGPSMemoryStorage()
+    await clearOldCozyGPSMemoryStorage()
     Log('Cleared old storages')
     if (lastVersion < 2) {
-      await ClearOldCozyGPSMemoryStorage()
+      await clearOldCozyGPSMemoryStorage()
       Log(
         'Cleared old storage adresses because we may be updating from an old version'
       )
@@ -165,7 +165,7 @@ export const CheckForUpdateActions = async () => {
   }
 }
 
-const CreateUser = async user => {
+const createUser = async user => {
   let response = await fetch(serverURL + '/profile/create', {
     method: 'POST',
     headers: {
@@ -187,7 +187,7 @@ const parseISOString = ISOString => {
   return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]))
 }
 
-const TranslateToEMissionLocationPoint = location_point => {
+const translateToEMissionLocationPoint = location_point => {
   let ts = Math.floor(parseISOString(location_point.timestamp).getTime() / 1000)
   return {
     data: {
@@ -213,7 +213,7 @@ const TranslateToEMissionLocationPoint = location_point => {
   }
 }
 
-const TranslateToEMissionMotionActivityPoint = location => {
+const translateToEMissionMotionActivityPoint = location => {
   let ts = Math.floor(parseISOString(location.timestamp).getTime() / 1000)
   Log('Activity type : ' + location.activity.type)
   if (location.activity.type === 'unknown') {
@@ -250,7 +250,7 @@ const TranslateToEMissionMotionActivityPoint = location => {
   }
 }
 
-export const UpdateId = async newId => {
+export const updateId = async newId => {
   // If there are still non-uploaded locations, it should be handled before changing the Id or they will be sent with the new one
   Log('Updating Id to ' + newId)
 
@@ -260,7 +260,7 @@ export const UpdateId = async newId => {
       return 'FAIL_STORING_ID'
     }
     try {
-      await CreateUser(newId)
+      await createUser(newId)
       return 'SUCCESS_STORING_SUCCESS_CREATING'
     } catch (error) {
       return 'SUCCESS_STORING_FAIL_CREATING'
@@ -270,7 +270,7 @@ export const UpdateId = async newId => {
   }
 }
 
-const Transition = (state, transition, transition_ts) => {
+const transition = (state, transition, transition_ts) => {
   return {
     data: {
       currState: state,
@@ -289,30 +289,30 @@ const Transition = (state, transition, transition_ts) => {
 }
 
 // Add start transitions, within 0.1s of given ts
-const AddStartTransitions = (addedTo, ts) => {
+const addStartTransitions = (addedTo, ts) => {
   addedTo.push(
-    Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01)
+    transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01)
   )
   addedTo.push(
-    Transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.02)
+    transition('STATE_WAITING_FOR_TRIP_START', 'T_TRIP_STARTED', ts + 0.02)
   )
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.03))
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_RESTARTED', ts + 0.04))
+  addedTo.push(transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.03))
+  addedTo.push(transition('STATE_ONGOING_TRIP', 'T_TRIP_RESTARTED', ts + 0.04))
 }
 
 // Add stop transitions, within 0.1s of given ts
-const AddStopTransitions = (addedTo, ts) => {
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01))
+const addStopTransitions = (addedTo, ts) => {
+  addedTo.push(transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01))
   addedTo.push(
-    Transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.02)
+    transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.02)
   )
   addedTo.push(
-    Transition('STATE_ONGOING_TRIP', 'T_END_TRIP_TRACKING', ts + 0.03)
+    transition('STATE_ONGOING_TRIP', 'T_END_TRIP_TRACKING', ts + 0.03)
   )
-  addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_TRIP_ENDED', ts + 0.04))
-  addedTo.push(Transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.05))
+  addedTo.push(transition('STATE_ONGOING_TRIP', 'T_TRIP_ENDED', ts + 0.04))
+  addedTo.push(transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.05))
   addedTo.push(
-    Transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.06)
+    transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.06)
   )
 }
 
@@ -320,7 +320,7 @@ const getTs = location => {
   return parseISOString(location.timestamp).getTime() / 1000
 }
 
-const UploadUserCache = async (
+const uploadUserCache = async (
   content,
   user,
   uuidsToDeleteOnSuccess,
@@ -381,8 +381,8 @@ const uploadWithNoNewPoints = async (user, force) => {
   const content = []
 
   if (force) {
-    AddStopTransitions(content, Date.now() / 1000)
-    await UploadUserCache(content, user, [])
+    addStopTransitions(content, Date.now() / 1000)
+    await uploadUserCache(content, user, [])
   } else {
     if (lastPoint == undefined) {
       Log('No previous location either, no upload')
@@ -396,8 +396,8 @@ const uploadWithNoNewPoints = async (user, force) => {
             's ago), posting stop transitions at ' +
             new Date(1000 * getTs(lastPoint))
         )
-        AddStopTransitions(content, getTs(lastPoint))
-        await UploadUserCache(content, user, [])
+        addStopTransitions(content, getTs(lastPoint))
+        await uploadUserCache(content, user, [])
         Log('Finished upload of stop transtitions')
       } else {
         Log('Previous location too recent (' + deltaT + 's ago), no upload')
@@ -426,10 +426,10 @@ const getDistanceFromLatLonInM = (point1, point2) => {
 }
 
 const addPoint = (content, point, filtered) => {
-  content.push(TranslateToEMissionLocationPoint(point))
+  content.push(translateToEMissionLocationPoint(point))
 
   if (filtered) {
-    content.push(TranslateToEMissionLocationPoint(point))
+    content.push(translateToEMissionLocationPoint(point))
     content.at(-1).metadata.key = 'background/filtered_location'
   }
 }
@@ -437,7 +437,7 @@ const addPoint = (content, point, filtered) => {
 const addMotionActivity = (content, previousPoint, point) => {
   if (!previousPoint || previousPoint.activity?.type !== point.activity?.type) {
     // Add new activity type when it's the first point, or when a new motion activity type (i.e. mode) is detected
-    const motionActivity = TranslateToEMissionMotionActivityPoint(point)
+    const motionActivity = translateToEMissionMotionActivityPoint(point)
     content.push(motionActivity)
   }
   return
@@ -465,7 +465,7 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
           new Date(1000 * (getTs(point) - 1)) +
           's'
       )
-      AddStartTransitions(contentToUpload, getTs(point) - 1)
+      addStartTransitions(contentToUpload, getTs(point) - 1)
     } else {
       const deltaT = getTs(point) - getTs(previousPoint)
       if (deltaT > timeToAddStopTransitionsSec) {
@@ -480,8 +480,8 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
         Log('Distance between points : ' + distance)
         if (distance < maxDistanceDeltaToRestart) {
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
-          AddStopTransitions(contentToUpload, getTs(previousPoint) + 180) // 3 min later for now
-          AddStartTransitions(contentToUpload, getTs(point) - 1)
+          addStopTransitions(contentToUpload, getTs(previousPoint) + 180) // 3 min later for now
+          addStartTransitions(contentToUpload, getTs(point) - 1)
         } else {
           Log('Long distance, leaving uninterrupted trip: ' + distance + 'm')
         }
@@ -503,14 +503,14 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
     const lastBatchPoint = points[points.length - 1]
     const deltaLastPoint = Date.now() / 1000 - getTs(lastBatchPoint)
     Log('Delta last point : ' + deltaLastPoint)
-    AddStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
+    addStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
   }
 
-  await UploadUserCache(contentToUpload, user, uuidsToDelete, points.at(-1))
+  await uploadUserCache(contentToUpload, user, uuidsToDelete, points.at(-1))
 }
 
-export const SmartSend = async (locations, user, { force = true } = {}) => {
-  await CreateUser(user) // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
+export const smartSend = async (locations, user, { force = true } = {}) => {
+  await createUser(user) // Will throw on fail, skipping the rest (trying again later is handled a level above smartSend)
 
   if (locations.length === 0) {
     Log('No new locations')
@@ -540,7 +540,7 @@ export const SmartSend = async (locations, user, { force = true } = {}) => {
   }
 }
 
-export const UploadData = async ({ untilTs = 0, force = false } = {}) => {
+export const uploadData = async ({ untilTs = 0, force = false } = {}) => {
   // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
   Log('Starting upload process' + (force ? ', forced' : ''))
@@ -562,7 +562,7 @@ export const UploadData = async ({ untilTs = 0, force = false } = {}) => {
     Log('Using Id: ' + user)
 
     try {
-      await SmartSend(filteredLocations, user, { force })
+      await smartSend(filteredLocations, user, { force })
       await storeFlagFailUpload(false)
       return true
     } catch (message) {
@@ -597,7 +597,7 @@ export const handleMotionChange = async event => {
     // Get the event timestamp to filter out locations tracked after this
     const stationaryTs = event.location?.timestamp
     Log('Auto uploading from stop')
-    await UploadData({ untilTs: stationaryTs })
+    await uploadData({ untilTs: stationaryTs })
   }
 }
 
@@ -607,7 +607,7 @@ export const handleConnectivityChange = async event => {
   // Does not work with iOS emulator, event.connected is always false
   if (event.connected && (await getFlagFailUpload())) {
     Log('Auto uploading from reconnection and failed last attempt')
-    await UploadData()
+    await uploadData()
   }
 }
 
@@ -621,7 +621,7 @@ BackgroundGeolocation.onConnectivityChange(async event => {
   return handleConnectivityChange(event)
 })
 
-export const StartTracking = async () => {
+export const startTracking = async () => {
   try {
     Log('Starting')
 
@@ -654,12 +654,12 @@ export const StartTracking = async () => {
   }
 }
 
-export const StopTracking = async () => {
+export const stopTracking = async () => {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
       await BackgroundGeolocation.stop()
       Log('Turned off tracking, uploading...')
-      await UploadData({ force: true }) // Forced end, but if fails no current solution (won't retry until turned back on)
+      await uploadData({ force: true }) // Forced end, but if fails no current solution (won't retry until turned back on)
     } else {
       console.log('Already off')
     }
