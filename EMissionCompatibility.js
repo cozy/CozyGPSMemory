@@ -101,11 +101,7 @@ export async function _getFlagFailUpload() {
 }
 
 export async function _storeId(Id) {
-  try {
-    await AsyncStorage.setItem(IdStorageAdress, Id)
-  } catch (error) {
-    throw error
-  }
+  await AsyncStorage.setItem(IdStorageAdress, Id)
 }
 
 export async function _getId() {
