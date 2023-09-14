@@ -38,7 +38,7 @@ const versionIterationCounterStorageAdress =
 
 const Logger = BackgroundGeolocation.logger
 
-async function _updateVersionIterationCounter() {
+const _updateVersionIterationCounter = async () => {
   await AsyncStorage.setItem(
     versionIterationCounterStorageAdress,
     currVersionIterationCounter.toString()
@@ -46,34 +46,34 @@ async function _updateVersionIterationCounter() {
   Log('Set versionIterationCounter to: ' + currVersionIterationCounter)
 }
 
-async function _getVersionIterationCounter() {
+const _getVersionIterationCounter = async () => {
   return parseInt(
     (await AsyncStorage.getItem(versionIterationCounterStorageAdress)) | '0'
   )
 }
 
-async function _getLastPointUploaded() {
+const _getLastPointUploaded = async () => {
   return JSON.parse(await AsyncStorage.getItem(LastPointUploadedAdress))
 }
 
-async function _setLastPointUploaded(value) {
+const _setLastPointUploaded = async value => {
   await AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value))
 }
 
-export async function getAllLogs() {
+export const getAllLogs = async () => {
   return Logger.getLog()
 }
 
-export function sendLogFile() {
+export const sendLogFile = () => {
   return Logger.emailLog('')
 }
 
-export function Log(message) {
+export const Log = message => {
   console.log(message)
   Logger.debug(message)
 }
 
-async function _storeFlagFailUpload(Flag) {
+const _storeFlagFailUpload = async Flag => {
   try {
     await AsyncStorage.setItem(
       FlagFailUploadStorageAdress,
@@ -85,7 +85,7 @@ async function _storeFlagFailUpload(Flag) {
   }
 }
 
-export async function _getFlagFailUpload() {
+export const _getFlagFailUpload = async () => {
   try {
     let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress)
     if (value == undefined) {
@@ -100,11 +100,11 @@ export async function _getFlagFailUpload() {
   }
 }
 
-export async function _storeId(Id) {
+export const _storeId = async Id => {
   await AsyncStorage.setItem(IdStorageAdress, Id)
 }
 
-export async function _getId() {
+export const _getId = async () => {
   try {
     let value = await AsyncStorage.getItem(IdStorageAdress)
     if (value == undefined) {
@@ -126,7 +126,7 @@ export async function _getId() {
   }
 }
 
-export async function ClearAllCozyGPSMemoryData() {
+export const ClearAllCozyGPSMemoryData = async () => {
   await BackgroundGeolocation.destroyLocations()
   await AsyncStorage.multiRemove([
     IdStorageAdress,
@@ -140,11 +140,11 @@ export async function ClearAllCozyGPSMemoryData() {
   Log('Everything cleared')
 }
 
-export async function ClearOldCozyGPSMemoryStorage() {
+export const ClearOldCozyGPSMemoryStorage = async () => {
   await AsyncStorage.multiRemove(OldStorageAdresses) // Just to clean up devices upgrading from older builds since storage was updated
 }
 
-export async function CheckForUpdateActions() {
+export const CheckForUpdateActions = async () => {
   const lastVersion = await _getVersionIterationCounter()
   if (lastVersion != currVersionIterationCounter) {
     Log(
@@ -165,7 +165,7 @@ export async function CheckForUpdateActions() {
   }
 }
 
-async function CreateUser(user) {
+const CreateUser = async user => {
   let response = await fetch(serverURL + '/profile/create', {
     method: 'POST',
     headers: {
@@ -182,12 +182,12 @@ async function CreateUser(user) {
   }
 }
 
-function parseISOString(ISOString) {
+const parseISOString = ISOString => {
   let b = ISOString.split(/\D+/)
   return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]))
 }
 
-function TranslateToEMissionLocationPoint(location_point) {
+const TranslateToEMissionLocationPoint = location_point => {
   let ts = Math.floor(parseISOString(location_point.timestamp).getTime() / 1000)
   return {
     data: {
@@ -213,7 +213,7 @@ function TranslateToEMissionLocationPoint(location_point) {
   }
 }
 
-function TranslateToEMissionMotionActivityPoint(location) {
+const TranslateToEMissionMotionActivityPoint = location => {
   let ts = Math.floor(parseISOString(location.timestamp).getTime() / 1000)
   Log('Activity type : ' + location.activity.type)
   if (location.activity.type === 'unknown') {
@@ -250,7 +250,7 @@ function TranslateToEMissionMotionActivityPoint(location) {
   }
 }
 
-export async function UpdateId(newId) {
+export const UpdateId = async newId => {
   // If there are still non-uploaded locations, it should be handled before changing the Id or they will be sent with the new one
   Log('Updating Id to ' + newId)
 
@@ -270,7 +270,7 @@ export async function UpdateId(newId) {
   }
 }
 
-function Transition(state, transition, transition_ts) {
+const Transition = (state, transition, transition_ts) => {
   return {
     data: {
       currState: state,
@@ -289,7 +289,7 @@ function Transition(state, transition, transition_ts) {
 }
 
 // Add start transitions, within 0.1s of given ts
-function AddStartTransitions(addedTo, ts) {
+const AddStartTransitions = (addedTo, ts) => {
   addedTo.push(
     Transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01)
   )
@@ -301,7 +301,7 @@ function AddStartTransitions(addedTo, ts) {
 }
 
 // Add stop transitions, within 0.1s of given ts
-function AddStopTransitions(addedTo, ts) {
+const AddStopTransitions = (addedTo, ts) => {
   addedTo.push(Transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01))
   addedTo.push(
     Transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.02)
@@ -316,16 +316,16 @@ function AddStopTransitions(addedTo, ts) {
   )
 }
 
-function getTs(location) {
+const getTs = location => {
   return parseISOString(location.timestamp).getTime() / 1000
 }
 
-async function UploadUserCache(
+const UploadUserCache = async (
   content,
   user,
   uuidsToDeleteOnSuccess,
   lastPointToSave = undefined
-) {
+) => {
   Log('Uploading content to usercache...')
   let JsonRequest = {
     user: user,
@@ -376,7 +376,7 @@ async function UploadUserCache(
   }
 }
 
-async function uploadWithNoNewPoints(user, force) {
+const uploadWithNoNewPoints = async (user, force) => {
   const lastPoint = await _getLastPointUploaded()
   const content = []
 
@@ -406,11 +406,11 @@ async function uploadWithNoNewPoints(user, force) {
   }
 }
 
-function deg2rad(deg) {
+const deg2rad = deg => {
   return deg * (Math.PI / 180)
 }
 
-function getDistanceFromLatLonInM(point1, point2) {
+const getDistanceFromLatLonInM = (point1, point2) => {
   const R = 6371 // Radius of the earth in km
   const dLat = deg2rad(point2.coords.latitude - point1.coords.latitude) // deg2rad below
   const dLon = deg2rad(point2.coords.longitude - point1.coords.longitude)
@@ -443,7 +443,7 @@ const addMotionActivity = (content, previousPoint, point) => {
   return
 }
 
-async function uploadPoints(points, user, lastPoint, isLastBatch) {
+const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
   const contentToUpload = []
   const uuidsToDelete = []
 
@@ -509,7 +509,7 @@ async function uploadPoints(points, user, lastPoint, isLastBatch) {
   await UploadUserCache(contentToUpload, user, uuidsToDelete, points.at(-1))
 }
 
-export async function SmartSend(locations, user, { force = true } = {}) {
+export const SmartSend = async (locations, user, { force = true } = {}) => {
   await CreateUser(user) // Will throw on fail, skipping the rest (trying again later is handled a level above SmartSend)
 
   if (locations.length === 0) {
@@ -540,7 +540,7 @@ export async function SmartSend(locations, user, { force = true } = {}) {
   }
 }
 
-export async function UploadData({ untilTs = 0, force = false } = {}) {
+export const UploadData = async ({ untilTs = 0, force = false } = {}) => {
   // WARNING: la valeur de retour (booleen) indique le succès, mais mal géré dans le retryOnFail (actuellement uniquement utilisé pour le bouton "Forcer l'upload" avecec force et pas de retry)
 
   Log('Starting upload process' + (force ? ', forced' : ''))
@@ -589,7 +589,7 @@ const onProviderChange = BackgroundGeolocation.onProviderChange(async (event) =>
 });
 */
 
-export async function handleMotionChange(event) {
+export const handleMotionChange = async event => {
   Log('[MOTION CHANGE] - ' + JSON.stringify(event))
 
   const isStationary = !event.isMoving || event.activity?.still // The isMoving param does not seem reliable with Android headless mode
@@ -601,7 +601,7 @@ export async function handleMotionChange(event) {
   }
 }
 
-export async function handleConnectivityChange(event) {
+export const handleConnectivityChange = async event => {
   Log('[CONNECTIVITY CHANGE] - ' + JSON.stringify(event))
 
   // Does not work with iOS emulator, event.connected is always false
@@ -621,7 +621,7 @@ BackgroundGeolocation.onConnectivityChange(async event => {
   return handleConnectivityChange(event)
 })
 
-export async function StartTracking() {
+export const StartTracking = async () => {
   try {
     Log('Starting')
 
@@ -654,7 +654,7 @@ export async function StartTracking() {
   }
 }
 
-export async function StopTracking() {
+export const StopTracking = async () => {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
       await BackgroundGeolocation.stop()
