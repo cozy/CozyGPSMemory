@@ -38,7 +38,7 @@ const versionIterationCounterStorageAdress =
 
 const Logger = BackgroundGeolocation.logger
 
-const _updateVersionIterationCounter = async () => {
+const updateVersionIterationCounter = async () => {
   await AsyncStorage.setItem(
     versionIterationCounterStorageAdress,
     currVersionIterationCounter.toString()
@@ -46,17 +46,17 @@ const _updateVersionIterationCounter = async () => {
   Log('Set versionIterationCounter to: ' + currVersionIterationCounter)
 }
 
-const _getVersionIterationCounter = async () => {
+const getVersionIterationCounter = async () => {
   return parseInt(
     (await AsyncStorage.getItem(versionIterationCounterStorageAdress)) | '0'
   )
 }
 
-const _getLastPointUploaded = async () => {
+const getLastPointUploaded = async () => {
   return JSON.parse(await AsyncStorage.getItem(LastPointUploadedAdress))
 }
 
-const _setLastPointUploaded = async value => {
+const setLastPointUploaded = async value => {
   await AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value))
 }
 
@@ -73,7 +73,7 @@ export const Log = message => {
   Logger.debug(message)
 }
 
-const _storeFlagFailUpload = async Flag => {
+const storeFlagFailUpload = async Flag => {
   try {
     await AsyncStorage.setItem(
       FlagFailUploadStorageAdress,
@@ -85,11 +85,11 @@ const _storeFlagFailUpload = async Flag => {
   }
 }
 
-export const _getFlagFailUpload = async () => {
+export const getFlagFailUpload = async () => {
   try {
     let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress)
     if (value == undefined) {
-      await _storeFlagFailUpload(false)
+      await storeFlagFailUpload(false)
       return false
     } else {
       return value == 'true'
@@ -100,11 +100,11 @@ export const _getFlagFailUpload = async () => {
   }
 }
 
-export const _storeId = async Id => {
+export const storeId = async Id => {
   await AsyncStorage.setItem(IdStorageAdress, Id)
 }
 
-export const _getId = async () => {
+export const getId = async () => {
   try {
     let value = await AsyncStorage.getItem(IdStorageAdress)
     if (value == undefined) {
@@ -112,7 +112,7 @@ export const _getId = async () => {
       value = useUniqueDeviceId
         ? await getUniqueId()
         : Math.random().toString(36).replace('0.', '')
-      await _storeId(value) // random Id or device Id depending on config
+      await storeId(value) // random Id or device Id depending on config
       if (value != (await AsyncStorage.getItem(IdStorageAdress))) {
         throw new Error("New Id couldn't be stored") // We make sure it is stored
       }
@@ -145,7 +145,7 @@ export const ClearOldCozyGPSMemoryStorage = async () => {
 }
 
 export const CheckForUpdateActions = async () => {
-  const lastVersion = await _getVersionIterationCounter()
+  const lastVersion = await getVersionIterationCounter()
   if (lastVersion != currVersionIterationCounter) {
     Log(
       'Found last version: ' +
@@ -161,7 +161,7 @@ export const CheckForUpdateActions = async () => {
         'Cleared old storage adresses because we may be updating from an old version'
       )
     }
-    _updateVersionIterationCounter()
+    updateVersionIterationCounter()
   }
 }
 
@@ -254,9 +254,9 @@ export const UpdateId = async newId => {
   // If there are still non-uploaded locations, it should be handled before changing the Id or they will be sent with the new one
   Log('Updating Id to ' + newId)
 
-  if (newId.length > 2 && newId != (await _getId())) {
-    await _storeId(newId)
-    if (newId != (await _getId())) {
+  if (newId.length > 2 && newId != (await getId())) {
+    await storeId(newId)
+    if (newId != (await getId())) {
       return 'FAIL_STORING_ID'
     }
     try {
@@ -356,7 +356,7 @@ const UploadUserCache = async (
   } else {
     Log('Success uploading')
     if (lastPointToSave != undefined) {
-      await _setLastPointUploaded(lastPointToSave)
+      await setLastPointUploaded(lastPointToSave)
       Log('Saved last point')
     } else {
       Log('No last point to save')
@@ -377,7 +377,7 @@ const UploadUserCache = async (
 }
 
 const uploadWithNoNewPoints = async (user, force) => {
-  const lastPoint = await _getLastPointUploaded()
+  const lastPoint = await getLastPointUploaded()
   const content = []
 
   if (force) {
@@ -528,7 +528,7 @@ export const SmartSend = async (locations, user, { force = true } = {}) => {
       await uploadPoints(
         locations.slice(index, index + maxPointsPerBatch),
         user,
-        index === 0 ? await _getLastPointUploaded() : locations[index - 1],
+        index === 0 ? await getLastPointUploaded() : locations[index - 1],
         index + maxPointsPerBatch >= locations.length,
         force
       )
@@ -558,16 +558,16 @@ export const UploadData = async ({ untilTs = 0, force = false } = {}) => {
       Log('Locations filtered: ' + filteredLocations.length - locations.length)
     }
 
-    let user = await _getId()
+    let user = await getId()
     Log('Using Id: ' + user)
 
     try {
       await SmartSend(filteredLocations, user, { force })
-      await _storeFlagFailUpload(false)
+      await storeFlagFailUpload(false)
       return true
     } catch (message) {
       Log('Error trying to send data: ' + message)
-      await _storeFlagFailUpload(true)
+      await storeFlagFailUpload(true)
       return false
     }
   } catch (error) {
@@ -605,7 +605,7 @@ export const handleConnectivityChange = async event => {
   Log('[CONNECTIVITY CHANGE] - ' + JSON.stringify(event))
 
   // Does not work with iOS emulator, event.connected is always false
-  if (event.connected && (await _getFlagFailUpload())) {
+  if (event.connected && (await getFlagFailUpload())) {
     Log('Auto uploading from reconnection and failed last attempt')
     await UploadData()
   }

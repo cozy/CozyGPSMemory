@@ -25,7 +25,7 @@ import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import {
   UploadData,
-  _getId,
+  getId,
   ClearAllCozyGPSMemoryData,
   UpdateId,
   getAllLogs,
@@ -101,7 +101,7 @@ function App(): JSX.Element {
   const [PopUpVisible, setPopUpVisible] = useState(false);
   const [idInputPopupVisible, setIdInputPopupVisible] = useState(false);
   const DisplayIdInputPopup = async () => {
-    setIdBoxTest((await _getId()) || '');
+    setIdBoxTest((await getId()) || '');
     setIdInputPopupVisible(true);
   };
   const ForceUploadMobility = async () => {
@@ -182,7 +182,7 @@ function App(): JSX.Element {
 
           <Button
             onPress={async function () {
-              let idToCopy = await _getId();
+              let idToCopy = await getId();
               if (idToCopy == undefined) {
                 idToCopy = 'undefinedId';
               }
