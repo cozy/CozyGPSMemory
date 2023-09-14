@@ -443,7 +443,7 @@ const addMotionActivity = (content, previousPoint, point) => {
   return
 }
 
-async function uploadPoints(points, user, lastPoint, isLastBatch, force) {
+async function uploadPoints(points, user, lastPoint, isLastBatch) {
   const contentToUpload = []
   const uuidsToDelete = []
 
