@@ -16,22 +16,80 @@ import {
   TextInput,
   useColorScheme,
   View,
+  Switch,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import {
-  UploadData,
-  _getId,
-  ClearAllCozyGPSMemoryData,
-  UpdateId,
-  GeolocationSwitch,
+  uploadData,
+  getId,
+  clearAllCozyGPSMemoryData,
+  updateId,
   getAllLogs,
   sendLogFile,
+  startTracking,
+  stopTracking,
+  checkForUpdateActions,
+  ShouldBeTrackingFlagStorageAdress,
 } from './EMissionCompatibility.js';
 
 const devMode = true;
+
+function GeolocationSwitch() {
+  const [enabled, setEnabled] = React.useState(false);
+  const Toggle = () => {
+    if (!enabled) {
+      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'true');
+      startTracking();
+    } else {
+      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+      stopTracking();
+    }
+    setEnabled(previousState => !previousState);
+  };
+
+  React.useEffect(() => {
+    const checkAsync = async () => {
+      const value = await AsyncStorage.getItem(
+        ShouldBeTrackingFlagStorageAdress,
+      );
+      if (value !== undefined && value !== null) {
+        if (value == 'true') {
+          setEnabled(true);
+          startTracking();
+        } else {
+          setEnabled(false);
+          stopTracking();
+        }
+      } else {
+        setEnabled(false);
+        stopTracking();
+        AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+      }
+    };
+    checkAsync();
+
+    /// Handle update effects
+    checkForUpdateActions();
+  }, []);
+
+  return (
+    <View style={{alignItems: 'center', padding: 50}}>
+      <Text
+        style={{
+          fontSize: 36,
+          padding: 10,
+          color: useColorScheme() === 'dark' ? '#ffffff' : '#000000',
+        }}>
+        Tracking
+      </Text>
+      <Switch value={enabled} onValueChange={Toggle} />
+    </View>
+  );
+}
 
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -43,11 +101,11 @@ function App(): JSX.Element {
   const [PopUpVisible, setPopUpVisible] = useState(false);
   const [idInputPopupVisible, setIdInputPopupVisible] = useState(false);
   const DisplayIdInputPopup = async () => {
-    setIdBoxTest((await _getId()) || '');
+    setIdBoxTest((await getId()) || '');
     setIdInputPopupVisible(true);
   };
   const ForceUploadMobility = async () => {
-    if (await UploadData(true)) {
+    if (await uploadData(true)) {
       MakePopup('✅ All mobility measures uploaded!');
     } else {
       MakePopup('❌ There are still local positions');
@@ -87,8 +145,8 @@ function App(): JSX.Element {
     setPopUpVisible(true);
   }
 
-  async function UpdateIdFromButton(newId: string) {
-    let result = await UpdateId(newId);
+  async function updateIdFromButton(newId: string) {
+    let result = await updateId(newId);
     switch (result) {
       case 'SUCCESS_STORING_SUCCESS_CREATING':
         MakePopup('✅ Id successfully updated');
@@ -124,7 +182,7 @@ function App(): JSX.Element {
 
           <Button
             onPress={async function () {
-              let idToCopy = await _getId();
+              let idToCopy = await getId();
               if (idToCopy == undefined) {
                 idToCopy = 'undefinedId';
               }
@@ -176,7 +234,7 @@ function App(): JSX.Element {
         <Button
           onPress={async function () {
             try {
-              await ClearAllCozyGPSMemoryData();
+              await clearAllCozyGPSMemoryData();
               MakePopup('Deleted everything');
             } catch (error) {
               MakePopup("Couldn't purge\n" + error);
@@ -222,7 +280,7 @@ function App(): JSX.Element {
                 title="Validate"
                 onPress={async function () {
                   closeIdInputPopup();
-                  UpdateIdFromButton(IdBoxText);
+                  updateIdFromButton(IdBoxText);
                 }}
               />
             </View>
