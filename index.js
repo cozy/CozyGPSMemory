@@ -1,35 +1,36 @@
-import {AppRegistry} from 'react-native';
-import App from './App';
-import {name as appName} from './app.json';
-import BackgroundGeolocation from 'react-native-background-geolocation';
+import { AppRegistry } from 'react-native'
+import BackgroundGeolocation from 'react-native-background-geolocation'
+
+import App from './App'
 import {
   Log,
   handleMotionChange,
-  handleConnectivityChange,
-} from './EMissionCompatibility.js';
+  handleConnectivityChange
+} from './geolocation/services'
+import { name as appName } from './app.json'
 
-AppRegistry.registerComponent(appName, () => App);
+AppRegistry.registerComponent(appName, () => App)
 
 const HeadlessTask = async event => {
-  const params = event.params;
-  Log('headless event name: ' + event.name);
+  const params = event.params
+  Log('headless event name: ' + event.name)
 
   switch (event.name) {
     case 'location':
-      Log('[LOCATION] -' + JSON.stringify(params));
-      break;
+      Log('[LOCATION] -' + JSON.stringify(params))
+      break
     case 'motionchange':
-      await handleMotionChange(params);
-      break;
+      await handleMotionChange(params)
+      break
     case 'activitychange':
-      Log('[ACTIVITYCHANGE] -' + JSON.stringify(params));
-      break;
+      Log('[ACTIVITYCHANGE] -' + JSON.stringify(params))
+      break
     case 'connectivitychange':
-      await handleConnectivityChange(params);
-      break;
+      await handleConnectivityChange(params)
+      break
     default:
-      break;
+      break
   }
-};
+}
 
-BackgroundGeolocation.registerHeadlessTask(HeadlessTask);
+BackgroundGeolocation.registerHeadlessTask(HeadlessTask)

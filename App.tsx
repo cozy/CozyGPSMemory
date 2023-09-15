@@ -32,11 +32,13 @@ import {
   sendLogFile,
   startTracking,
   stopTracking,
-  checkForUpdateActions,
-  ShouldBeTrackingFlagStorageAdress,
-} from './EMissionCompatibility.js';
+} from './geolocation/services';
 
 const devMode = true;
+
+
+const ShouldBeTrackingFlagStorageAdress =
+  'CozyGPSMemory.ShouldBeTrackingFlag'
 
 function GeolocationSwitch() {
   const [enabled, setEnabled] = React.useState(false);
@@ -71,9 +73,6 @@ function GeolocationSwitch() {
       }
     };
     checkAsync();
-
-    /// Handle update effects
-    checkForUpdateActions();
   }, []);
 
   return (
