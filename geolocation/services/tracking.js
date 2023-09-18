@@ -144,7 +144,12 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
     addStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
   }
 
-  await uploadUserCache(contentToUpload, user, uuidsToDelete, points.at(-1))
+  await uploadUserCache(
+    contentToUpload,
+    user,
+    uuidsToDelete,
+    points[points.length - 1]
+  )
 }
 
 // Add start transitions, within 0.1s of given ts
@@ -197,7 +202,7 @@ const addPoint = (content, point, filtered) => {
 
   if (filtered) {
     content.push(translateToEMissionLocationPoint(point))
-    content.at(-1).metadata.key = 'background/filtered_location'
+    content[content.length - 1].metadata.key = 'background/filtered_location'
   }
 }
 
