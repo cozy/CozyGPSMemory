@@ -1,13 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import BackgroundGeolocation from 'react-native-background-geolocation'
 
-import { LastPointUploadedAdress } from './tracking'
-import {
-  uploadData,
-  getFlagFailUpload,
-  FlagFailUploadStorageAdress
-} from './upload'
-import { IdStorageAdress } from './user'
+import { uploadData, getFlagFailUpload } from './upload'
+import { StorageKeys } from '../../src/libs/localStorage/storage'
 import { Log } from '../helpers'
 
 export { getAllLogs, sendLogFile } from '../helpers'
@@ -99,9 +94,9 @@ BackgroundGeolocation.onConnectivityChange(async event => {
 export const clearAllCozyGPSMemoryData = async () => {
   await BackgroundGeolocation.destroyLocations()
   await AsyncStorage.multiRemove([
-    IdStorageAdress,
-    FlagFailUploadStorageAdress,
-    LastPointUploadedAdress
+    StorageKeys.IdStorageAdress,
+    StorageKeys.FlagFailUploadStorageAdress,
+    StorageKeys.LastPointUploadedAdress
   ])
   // Only exception : ShouldBeTrackingFlagStorageAdress, don't know the effects on the switch and would not feel natural anyway
   // await clearOldCozyGPSMemoryStorage()

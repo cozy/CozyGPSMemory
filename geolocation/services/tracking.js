@@ -1,21 +1,22 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
-
 import { uploadUserCache } from './upload'
 import { createUser } from './user'
+import {
+  StorageKeys,
+  storeData,
+  getData
+} from '../../src/libs/localStorage/storage'
 import { getTs, Log, parseISOString } from '../helpers'
 
 const timeToAddStopTransitionsSec = 20 * 60 // Shouldn't have longer breaks without siginificant motion
 const maxDistanceDeltaToRestart = 200 // In meters
 const maxPointsPerBatch = 300 // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 
-export const LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded'
-
 const getLastPointUploaded = async () => {
-  return JSON.parse(await AsyncStorage.getItem(LastPointUploadedAdress))
+  return await getData(StorageKeys.LastPointUploadedAdress)
 }
 
 export const setLastPointUploaded = async value => {
-  await AsyncStorage.setItem(LastPointUploadedAdress, JSON.stringify(value))
+  await storeData(StorageKeys.LastPointUploadedAdress, value)
 }
 
 // Future entry point of algorithm

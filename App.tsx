@@ -21,6 +21,8 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { StorageKeys } from './src/libs/localStorage/storage'
+
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import {
@@ -36,18 +38,14 @@ import {
 
 const devMode = true;
 
-
-const ShouldBeTrackingFlagStorageAdress =
-  'CozyGPSMemory.ShouldBeTrackingFlag'
-
 function GeolocationSwitch() {
   const [enabled, setEnabled] = React.useState(false);
   const Toggle = () => {
     if (!enabled) {
-      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'true');
+      AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'true');
       startTracking();
     } else {
-      AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+      AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'false');
       stopTracking();
     }
     setEnabled(previousState => !previousState);
@@ -56,7 +54,7 @@ function GeolocationSwitch() {
   React.useEffect(() => {
     const checkAsync = async () => {
       const value = await AsyncStorage.getItem(
-        ShouldBeTrackingFlagStorageAdress,
+        StorageKeys.ShouldBeTrackingFlagStorageAdress,
       );
       if (value !== undefined && value !== null) {
         if (value == 'true') {
@@ -69,7 +67,7 @@ function GeolocationSwitch() {
       } else {
         setEnabled(false);
         stopTracking();
-        AsyncStorage.setItem(ShouldBeTrackingFlagStorageAdress, 'false');
+        AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'false');
       }
     };
     checkAsync();

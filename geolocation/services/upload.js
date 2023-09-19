@@ -1,11 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import BackgroundGeolocation from 'react-native-background-geolocation'
 
 import { setLastPointUploaded, smartSend } from './tracking'
 import { getId } from './user'
+import {
+  StorageKeys,
+  storeData,
+  getData
+} from '../../src/libs/localStorage/storage'
 import { Log } from '../helpers'
 
-export const FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload'
 const DestroyLocalOnSuccess = true
 
 const serverURL = 'https://openpath.cozycloud.cc'
@@ -13,8 +16,8 @@ const heavyLogs = false // Log points, motion changes...
 
 const storeFlagFailUpload = async Flag => {
   try {
-    await AsyncStorage.setItem(
-      FlagFailUploadStorageAdress,
+    await storeData(
+      StorageKeys.FlagFailUploadStorageAdress,
       Flag ? 'true' : 'false'
     )
   } catch (error) {
@@ -25,7 +28,7 @@ const storeFlagFailUpload = async Flag => {
 
 export const getFlagFailUpload = async () => {
   try {
-    let value = await AsyncStorage.getItem(FlagFailUploadStorageAdress)
+    let value = await getData(StorageKeys.FlagFailUploadStorageAdress)
     if (value == undefined) {
       await storeFlagFailUpload(false)
       return false
