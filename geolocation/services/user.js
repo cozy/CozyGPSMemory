@@ -1,22 +1,25 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getUniqueId } from 'react-native-device-info'
 
+import {
+  StorageKeys,
+  storeData,
+  getData
+} from '../../src/libs/localStorage/storage'
 import { Log } from '../helpers'
 
-export const IdStorageAdress = 'CozyGPSMemory.Id'
 const useUniqueDeviceId = false
 const serverURL = 'https://openpath.cozycloud.cc'
 
 export const getId = async () => {
   try {
-    let value = await AsyncStorage.getItem(IdStorageAdress)
+    let value = await getData(StorageKeys.IdStorageAdress)
     if (value == undefined) {
       Log('No current Id, generating a new one...')
       value = useUniqueDeviceId
         ? await getUniqueId()
         : Math.random().toString(36).replace('0.', '')
       await storeId(value) // random Id or device Id depending on config
-      if (value != (await AsyncStorage.getItem(IdStorageAdress))) {
+      if (value != (await getData(StorageKeys.IdStorageAdress))) {
         throw new Error("New Id couldn't be stored") // We make sure it is stored
       }
       Log('Set Id to: ' + value)
@@ -67,5 +70,5 @@ export const updateId = async newId => {
 }
 
 export const storeId = async Id => {
-  await AsyncStorage.setItem(IdStorageAdress, Id)
+  await storeData(StorageKeys.IdStorageAdress, Id)
 }

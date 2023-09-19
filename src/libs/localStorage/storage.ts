@@ -2,13 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const { setItem, getItem, removeItem } = AsyncStorage
 export enum StorageKeys {
-  AutoLockEnabled = '@cozy_AmiralApp_autoLockEnabled',
-  BiometryActivated = '@cozy_AmiralApp_biometryActivated',
-  Capabilities = '@cozy_AmiralApp_Capabilities',
-  LastActivity = '@cozy_AmiralApp_lastActivity',
-  DefaultRedirectionUrl = '@cozy_AmiralAppDefaultRedirectionUrl',
-  SessionCreatedFlag = 'SESSION_CREATED_FLAG',
-  IconsTable = '@cozy_AmiralAppIcons'
+  IdStorageAdress = 'CozyGPSMemory.Id',
+  FlagFailUploadStorageAdress = 'CozyGPSMemory.FlagFailUpload',
+  LastPointUploadedAdress = 'CozyGPSMemory.LastPointUploaded',
+  ShouldBeTrackingFlagStorageAdress = 'CozyGPSMemory.ShouldBeTrackingFlag'
 }
 
 export type IconsCache = Record<string, { version: string; xml: string }>
