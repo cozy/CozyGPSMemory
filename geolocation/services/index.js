@@ -6,7 +6,7 @@ import { StorageKeys } from '../../src/libs/localStorage/storage'
 import { Log } from '../helpers'
 
 export { getAllLogs, sendLogFile } from '../helpers'
-export { getId, updateId } from './user'
+export { getOrCreateId, updateId } from './user'
 export { uploadData } from './upload'
 
 const waitBeforeStopMotionEventMin = 10 // Align with openpath: https://github.com/e-mission/e-mission-server/blob/master/emission/analysis/intake/segmentation/trip_segmentation.py#L59

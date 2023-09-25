@@ -10,7 +10,7 @@ import { Log } from '../helpers'
 const useUniqueDeviceId = false
 const serverURL = 'https://openpath.cozycloud.cc'
 
-export const getId = async () => {
+export const getOrCreateId = async () => {
   try {
     let value = await getData(StorageKeys.IdStorageAdress)
     if (value == undefined) {
@@ -50,9 +50,9 @@ export const updateId = async newId => {
   // If there are still non-uploaded locations, it should be handled before changing the Id or they will be sent with the new one
   Log('Updating Id to ' + newId)
 
-  if (newId.length > 2 && newId != (await getId())) {
+  if (newId.length > 2 && newId != (await getOrCreateId())) {
     await storeId(newId)
-    if (newId != (await getId())) {
+    if (newId != (await getOrCreateId())) {
       return 'FAIL_STORING_ID'
     }
     try {

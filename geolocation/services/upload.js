@@ -1,7 +1,7 @@
 import BackgroundGeolocation from 'react-native-background-geolocation'
 
 import { setLastPointUploaded, smartSend } from './tracking'
-import { getId } from './user'
+import { getOrCreateId } from './user'
 import {
   StorageKeys,
   storeData,
@@ -115,7 +115,7 @@ export const uploadData = async ({ untilTs = 0, force = false } = {}) => {
       Log('Locations filtered: ' + filteredLocations.length - locations.length)
     }
 
-    let user = await getId()
+    let user = await getOrCreateId()
     Log('Using Id: ' + user)
 
     try {
