@@ -9,7 +9,7 @@ import {Switch, Text, useColorScheme, View} from 'react-native';
 const currVersionIterationCounter = 3; // Simple counter to iterate versions while we run betas and be able to run "one-time only" code on update. Probably exists a cleaner way
 const DestroyLocalOnSuccess = true;
 const waitBeforeStopMotionEventMin = 10; // Align with openpath: https://github.com/e-mission/e-mission-server/blob/master/emission/analysis/intake/segmentation/trip_segmentation.py#L59
-const timeToAddStopTransitionsSec = 20 * 60; // Shouldn't have longer breaks without siginificant motion
+const timeToAddStopTransitionsSec = 11 * 60; // Shouldn't have longer breaks without siginificant motion
 const maxDistanceDeltaToRestart = 200; // In meters
 const serverURL = 'https://openpath.cozycloud.cc';
 const maxPointsPerBatch = 300; // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
@@ -524,11 +524,12 @@ async function uploadPoints(
             's between ' +
             new Date(1000 * getTs(previousPoint)) +
             ' and ' +
-            new Date(1000 * getTs(point))
+            new Date(1000 * getTs(point)),
         );
         const distance = getDistanceFromLatLonInM(previousPoint, point);
         Log('Distance between points : ' + distance);
         if (distance < maxDistanceDeltaToRestart) {
+          Log('Small distance break detected');
           Log('Add manual stop/start because of small distance');
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
           await AddStopTransitions(contentToUpload, getTs(previousPoint) + 1);
@@ -700,7 +701,7 @@ export async function StartTracking() {
       distanceFilter: 20,
       elasticityMultiplier: 3,
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
-      stationaryRadius: 200, // Minimum, but still usually takes 200m
+      stationaryRadius: 50, // Default is 25, but still usually takes 200m on iOS
       // Activity Recognition
       stopTimeout: waitBeforeStopMotionEventMin,
       // Application config
@@ -713,6 +714,16 @@ export async function StartTracking() {
       autoSync: false, // <-- [Default: true] Set true to sync each location to server as it arrives.
       stopOnTerminate: false, // Allow the background-service to continue tracking when user closes the app, for Android. Maybe also useful for ios https://transistorsoft.github.io/react-native-background-geolocation/interfaces/config.html#stoponterminate
       enableHeadless: true,
+      foregroundService: true,
+      // locationAuthorizationRequest: 'Always',
+      // backgroundPermissionRationale: {
+      //   title:
+      //     "Allow {applicationName} to access to this device's location in the background?",
+      //   message:
+      //     'In order to track your activity in the background, please grant "{backgroundPermissionOptionLabel}" for location permission',
+      //   positiveAction: 'Change to "{backgroundPermissionOptionLabel}"',
+      //   negativeAction: 'Cancel',
+      // },
     });
     await BackgroundGeolocation.start();
 
