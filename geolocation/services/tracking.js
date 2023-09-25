@@ -86,17 +86,21 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
   const contentToUpload = []
   const uuidsToDelete = []
 
-  for (
-    let indexBuildingRequest = 0;
-    indexBuildingRequest < points.length;
-    indexBuildingRequest++
-  ) {
-    const point = points[indexBuildingRequest]
+  for (let i = 0; i < points.length; i++) {
+    const point = points[i]
     uuidsToDelete.push(point.uuid)
+    if (points.length > 0) {
+      Log(
+        'upload points from ' +
+          points[0]?.timestamp +
+          ' - to ' +
+          points[points.length - 1]?.timestamp
+      )
+    }
     const previousPoint =
-      indexBuildingRequest === 0 // Handles setting up the case for the first point
+      i === 0 // Handles setting up the case for the first point
         ? lastPoint // Can be undefined
-        : points[indexBuildingRequest - 1]
+        : points[i - 1]
 
     // ----- Step 1: Decide if transitions should be added
     let startNewTrip = false
@@ -115,11 +119,16 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
           'Noticed a break: ' +
             deltaT +
             's at ' +
-            new Date(1000 * getTs(previousPoint))
+            new Date(1000 * getTs(previousPoint)),
+          's between ' +
+            new Date(1000 * getTs(previousPoint)) +
+            ' and ' +
+            new Date(1000 * getTs(point))
         )
         const distance = getDistanceFromLatLonInM(previousPoint, point)
         Log('Distance between points : ' + distance)
         if (distance < maxDistanceDeltaToRestart) {
+          Log('Add manual stop/start because of small distance')
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
           addStopTransitions(contentToUpload, getTs(previousPoint) + 180) // 3 min later for now
           addStartTransitions(contentToUpload, getTs(point) - 1)
