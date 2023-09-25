@@ -19,9 +19,6 @@ export const getId = async () => {
         ? await getUniqueId()
         : Math.random().toString(36).replace('0.', '')
       await storeId(value) // random Id or device Id depending on config
-      if (value != (await getData(StorageKeys.IdStorageAdress))) {
-        throw new Error("New Id couldn't be stored") // We make sure it is stored
-      }
       Log('Set Id to: ' + value)
     }
 
