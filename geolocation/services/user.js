@@ -10,6 +10,10 @@ import { Log } from '../helpers'
 const useUniqueDeviceId = false
 const serverURL = 'https://openpath.cozycloud.cc'
 
+export const getId = async () => {
+  return await getData(StorageKeys.IdStorageAdress)
+}
+
 export const getOrCreateId = async () => {
   try {
     let value = await getData(StorageKeys.IdStorageAdress)
