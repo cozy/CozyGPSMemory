@@ -98,6 +98,8 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
         ? lastPoint // Can be undefined
         : points[indexBuildingRequest - 1]
 
+    // ----- Step 1: Decide if transitions should be added
+    let startNewTrip = false
     if (!previousPoint) {
       Log(
         'No previous point found, adding start at ' +
@@ -127,6 +129,7 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
       }
     }
 
+    // -----Step 2: Add location points and motion activity
     // Condition de filtered_location:
     const samePosAsPrev =
       previousPoint &&
@@ -137,6 +140,8 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
     addPoint(contentToUpload, point, filtered)
     addMotionActivity(contentToUpload, previousPoint, point)
   }
+
+  // -----Step 3: Force end trip for the last point, as the device had been stopped long enough
   if (isLastBatch) {
     // Force a stop transition for the last point
     const lastBatchPoint = points[points.length - 1]
@@ -145,6 +150,7 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
     addStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
   }
 
+  // -----Step 4: Upload data
   await uploadUserCache(
     contentToUpload,
     user,
