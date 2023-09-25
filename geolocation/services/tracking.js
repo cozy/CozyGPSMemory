@@ -19,6 +19,24 @@ export const setLastPointUploaded = async value => {
   await storeData(StorageKeys.LastPointUploadedAdress, value)
 }
 
+const setLastStopTransitionTs = async timestamp => {
+  await storeData(StorageKeys.LastStopTransitionTsKey, timestamp.toString())
+}
+
+const setLastStartTransitionTs = async timestamp => {
+  await storeData(StorageKeys.LastStartTransitionTsKey, timestamp.toString())
+}
+
+const getLastStopTransitionTs = async () => {
+  const ts = await getData(StorageKeys.LastStopTransitionTsKey)
+  return ts ? parseInt(ts, 10) : 0
+}
+
+const getLastStartTransitionTs = async () => {
+  const ts = await getData(StorageKeys.LastStartTransitionTsKey)
+  return ts ? parseInt(ts, 10) : 0
+}
+
 // Future entry point of algorithm
 // prepareTrackingData / extractTrackingDate
 export const smartSend = async (locations, user, { force = true } = {}) => {
@@ -57,7 +75,7 @@ const uploadWithNoNewPoints = async (user, force) => {
   const content = []
 
   if (force) {
-    addStopTransitions(content, Date.now() / 1000)
+    await addStopTransitions(content, Date.now() / 1000)
     await uploadUserCache(content, user, [])
   } else {
     if (lastPoint == undefined) {
@@ -72,7 +90,7 @@ const uploadWithNoNewPoints = async (user, force) => {
             's ago), posting stop transitions at ' +
             new Date(1000 * getTs(lastPoint))
         )
-        addStopTransitions(content, getTs(lastPoint))
+        await addStopTransitions(content, getTs(lastPoint))
         await uploadUserCache(content, user, [])
         Log('Finished upload of stop transtitions')
       } else {
@@ -110,7 +128,8 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
           new Date(1000 * (getTs(point) - 1)) +
           's'
       )
-      addStartTransitions(contentToUpload, getTs(point) - 1)
+      await addStartTransitions(contentToUpload, getTs(point) - 1)
+      startNewTrip = true
     } else {
       const deltaT = getTs(point) - getTs(previousPoint)
       if (deltaT > timeToAddStopTransitionsSec) {
@@ -130,8 +149,9 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
         if (distance < maxDistanceDeltaToRestart) {
           Log('Add manual stop/start because of small distance')
           // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
-          addStopTransitions(contentToUpload, getTs(previousPoint) + 180) // 3 min later for now
-          addStartTransitions(contentToUpload, getTs(point) - 1)
+          await addStopTransitions(contentToUpload, getTs(previousPoint) + 1)
+          await addStartTransitions(contentToUpload, getTs(point) - 1)
+          startNewTrip = true
         } else {
           Log('Long distance, leaving uninterrupted trip: ' + distance + 'm')
         }
@@ -139,6 +159,17 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
     }
 
     // -----Step 2: Add location points and motion activity
+
+    if (!startNewTrip && i === 0) {
+      // Add a start transition when it's the first point of the batch, and no start transition had been set
+      const lastStartTransitionTs = await getLastStartTransitionTs()
+      const lastStopTransitionTs = await getLastStopTransitionTs()
+      if (lastStopTransitionTs >= lastStartTransitionTs) {
+        Log('Based on timestamps, this is a new trip')
+        await addStartTransitions(contentToUpload, getTs(point) - 1)
+      }
+    }
+
     // Condition de filtered_location:
     const samePosAsPrev =
       previousPoint &&
@@ -156,7 +187,7 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
     const lastBatchPoint = points[points.length - 1]
     const deltaLastPoint = Date.now() / 1000 - getTs(lastBatchPoint)
     Log('Delta last point : ' + deltaLastPoint)
-    addStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
+    await addStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
   }
 
   // -----Step 4: Upload data
@@ -169,7 +200,9 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
 }
 
 // Add start transitions, within 0.1s of given ts
-const addStartTransitions = (addedTo, ts) => {
+const addStartTransitions = async (addedTo, ts) => {
+  Log('Add start transitions on ' + new Date(ts))
+
   addedTo.push(
     transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01)
   )
@@ -178,10 +211,14 @@ const addStartTransitions = (addedTo, ts) => {
   )
   addedTo.push(transition('STATE_ONGOING_TRIP', 'T_TRIP_STARTED', ts + 0.03))
   addedTo.push(transition('STATE_ONGOING_TRIP', 'T_TRIP_RESTARTED', ts + 0.04))
+
+  await setLastStartTransitionTs(ts)
 }
 
 // Add stop transitions, within 0.1s of given ts
-const addStopTransitions = (addedTo, ts) => {
+const addStopTransitions = async (addedTo, ts) => {
+  Log('Add stop transitions on ' + new Date(ts * 1000))
+
   addedTo.push(transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01))
   addedTo.push(
     transition('STATE_ONGOING_TRIP', 'T_TRIP_END_DETECTED', ts + 0.02)
@@ -194,7 +231,9 @@ const addStopTransitions = (addedTo, ts) => {
   addedTo.push(
     transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.06)
   )
+  await setLastStopTransitionTs(ts)
 }
+
 const transition = (state, transition, transition_ts) => {
   return {
     data: {
