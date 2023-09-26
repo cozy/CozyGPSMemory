@@ -42,10 +42,8 @@ function GeolocationSwitch() {
   const [enabled, setEnabled] = React.useState(false);
   const Toggle = () => {
     if (!enabled) {
-      AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'true');
       startTracking();
     } else {
-      AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'false');
       stopTracking();
     }
     setEnabled(previousState => !previousState);
@@ -57,7 +55,7 @@ function GeolocationSwitch() {
         StorageKeys.ShouldBeTrackingFlagStorageAdress,
       );
       if (value !== undefined && value !== null) {
-        if (value == 'true') {
+        if (value == 'true' || value == '"true"') {
           setEnabled(true);
           startTracking();
         } else {

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import BackgroundGeolocation from 'react-native-background-geolocation'
 
 import { uploadData, getFlagFailUpload } from './upload'
-import { StorageKeys } from '../../src/libs/localStorage/storage'
+import { StorageKeys, storeData } from '../../src/libs/localStorage/storage'
 import { Log } from '../helpers'
 
 export { getAllLogs, sendLogFile } from '../helpers'
@@ -37,6 +37,7 @@ export const startTracking = async () => {
       enableHeadless: true
     })
     await BackgroundGeolocation.start()
+    await storeData(StorageKeys.ShouldBeTrackingFlagStorageAdress, true)
 
     return true
   } catch {
@@ -48,6 +49,7 @@ export const stopTracking = async () => {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
       await BackgroundGeolocation.stop()
+      await storeData(StorageKeys.ShouldBeTrackingFlagStorageAdress, false)
       Log('Turned off tracking, uploading...')
       await uploadData({ force: true }) // Forced end, but if fails no current solution (won't retry until turned back on)
     } else {
