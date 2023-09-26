@@ -2,7 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import BackgroundGeolocation from 'react-native-background-geolocation'
 
 import { uploadData, getFlagFailUpload } from './upload'
-import { StorageKeys, storeData } from '../../src/libs/localStorage/storage'
+import {
+  StorageKeys,
+  storeData,
+  getData
+} from '../../src/libs/localStorage/storage'
 import { Log } from '../helpers'
 
 export { getAllLogs, sendLogFile } from '../helpers'
@@ -117,4 +121,8 @@ export const stopTrackingAndClearData = async () => {
     StorageKeys.ShouldBeTrackingFlagStorageAdress
   ])
   Log('Tracking stopped and everything cleared')
+}
+
+export const getShouldStartTracking = async () => {
+  return await getData(StorageKeys.ShouldBeTrackingFlagStorageAdress)
 }
