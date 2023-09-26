@@ -54,11 +54,8 @@ export const updateId = async newId => {
   // If there are still non-uploaded locations, it should be handled before changing the Id or they will be sent with the new one
   Log('Updating Id to ' + newId)
 
-  if (newId.length > 2 && newId != (await getOrCreateId())) {
+  if (newId.length > 2 && newId != (await getId())) {
     await storeId(newId)
-    if (newId != (await getOrCreateId())) {
-      return 'FAIL_STORING_ID'
-    }
     try {
       await createUser(newId)
       return 'SUCCESS_STORING_SUCCESS_CREATING'
