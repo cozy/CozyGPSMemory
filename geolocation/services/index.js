@@ -103,3 +103,16 @@ export const clearAllCozyGPSMemoryData = async () => {
   await BackgroundGeolocation.logger.destroyLog()
   Log('Everything cleared')
 }
+
+export const stopTrackingAndClearData = async () => {
+  await stopTracking()
+  await BackgroundGeolocation.destroyLocations()
+  await BackgroundGeolocation.logger.destroyLog()
+  await AsyncStorage.multiRemove([
+    StorageKeys.IdStorageAdress,
+    StorageKeys.FlagFailUploadStorageAdress,
+    StorageKeys.LastPointUploadedAdress,
+    StorageKeys.ShouldBeTrackingFlagStorageAdress
+  ])
+  Log('Tracking stopped and everything cleared')
+}
