@@ -46,24 +46,20 @@ export const smartSend = async (locations, user, { force = true } = {}) => {
     Log('No new locations')
     await uploadWithNoNewPoints(user, force)
   } else {
-    Log('Found pending locations, uploading them')
-    let batchCounter = 0
-    for (let index = 0; index < locations.length; index += maxPointsPerBatch) {
-      Log(
-        'Creating batch ' +
-          (batchCounter + 1) +
-          '/' +
-          (1 + locations.length / maxPointsPerBatch).toFixed(0)
-      ) // Probably imperfect, TO DO: check formula
-      await uploadPoints(
-        locations.slice(index, index + maxPointsPerBatch),
-        user,
-        index === 0 ? await getLastPointUploaded() : locations[index - 1],
-        index + maxPointsPerBatch >= locations.length,
-        force
-      )
+    Log('Found pending locations, uploading: ' + locations.length)
+    const nBatch = Math.floor(locations.length / maxPointsPerBatch) + 1
+    let previousPoint = await getLastPointUploaded()
 
-      batchCounter++
+    for (let i = 0; i < nBatch; i++) {
+      Log('Creating batch ' + (i + 1) + '/' + nBatch)
+
+      const startBatchPoint = i * maxPointsPerBatch
+      const endBatchPoint = (i + 1) * maxPointsPerBatch
+      const batchLocations = locations.slice(startBatchPoint, endBatchPoint)
+      const isLastBatch = i + 1 >= nBatch
+
+      await uploadPoints(batchLocations, user, previousPoint, isLastBatch)
+      previousPoint = batchLocations[batchLocations.length - 1]
     }
 
     Log('Uploaded last batch')
