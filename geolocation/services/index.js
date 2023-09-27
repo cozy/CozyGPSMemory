@@ -22,7 +22,7 @@ export const startTracking = async () => {
       distanceFilter: 20,
       elasticityMultiplier: 3,
       locationUpdateInterval: 10000, // Only used if on Android and if distanceFilter is 0
-      stationaryRadius: 200, // Minimum, but still usually takes 200m
+      stationaryRadius: 50, // Minimum is 25, but still usually takes 200m
       // Activity Recognition
       stopTimeout: waitBeforeStopMotionEventMin,
       // Application config
@@ -34,7 +34,8 @@ export const startTracking = async () => {
       batchSync: false, // <-- [Default: false] Set true to sync locations to server in a single HTTP request.
       autoSync: false, // <-- [Default: true] Set true to sync each location to server as it arrives.
       stopOnTerminate: false, // Allow the background-service to continue tracking when user closes the app, for Android. Maybe also useful for ios https://transistorsoft.github.io/react-native-background-geolocation/interfaces/config.html#stoponterminate
-      enableHeadless: true
+      enableHeadless: true,
+      foregroundService: true
     })
     await BackgroundGeolocation.start()
 
