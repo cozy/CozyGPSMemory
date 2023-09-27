@@ -7,8 +7,9 @@ import {
 } from '../../src/libs/localStorage/storage'
 import { getTs, Log, parseISOString } from '../helpers'
 
-const timeToAddStopTransitionsSec = 20 * 60 // Shouldn't have longer breaks without siginificant motion
-const maxDistanceDeltaToRestart = 200 // In meters
+const largeTemporalDeltaBetweenPoints = 30 * 60 // In seconds. Shouldn't have longer breaks without siginificant motion
+const maxTemporalDeltaBetweenPoints = 12 * 60 * 60 // In seconds. See https://github.com/e-mission/e-mission-server/blob/f6bf89a274e6cd10353da8f17ebb327a998c788a/emission/analysis/intake/segmentation/trip_segmentation_methods/dwell_segmentation_dist_filter.py#L194
+const minSpeedBetweenDistantPoints = 0.1 // In m/s. Note the average walking speed is ~1.4 m/s
 const maxPointsPerBatch = 300 // Represents actual points, elements in the POST will probably be around this*2 + ~10*number of stops made
 
 const getLastPointUploaded = async () => {
@@ -37,6 +38,13 @@ const getLastStartTransitionTs = async () => {
   return ts ? parseInt(ts, 10) : 0
 }
 
+export const createDataBatch = (locations, nRun, maxBatchSize) => {
+  const startBatchPoint = nRun * maxBatchSize
+  const endBatchPoint = (nRun + 1) * maxBatchSize
+  const batchLocations = locations.slice(startBatchPoint, endBatchPoint)
+  return batchLocations
+}
+
 // Future entry point of algorithm
 // prepareTrackingData / extractTrackingDate
 export const smartSend = async (locations, user, { force = true } = {}) => {
@@ -53,9 +61,7 @@ export const smartSend = async (locations, user, { force = true } = {}) => {
     for (let i = 0; i < nBatch; i++) {
       Log('Creating batch ' + (i + 1) + '/' + nBatch)
 
-      const startBatchPoint = i * maxPointsPerBatch
-      const endBatchPoint = (i + 1) * maxPointsPerBatch
-      const batchLocations = locations.slice(startBatchPoint, endBatchPoint)
+      const batchLocations = createDataBatch(locations, i, maxPointsPerBatch)
       const isLastBatch = i + 1 >= nBatch
 
       await uploadPoints(batchLocations, user, previousPoint, isLastBatch)
@@ -78,7 +84,7 @@ const uploadWithNoNewPoints = async (user, force) => {
       Log('No previous location either, no upload')
     } else {
       let deltaT = Date.now() / 1000 - getTs(lastPoint)
-      if (deltaT > timeToAddStopTransitionsSec) {
+      if (deltaT > largeTemporalDeltaBetweenPoints) {
         // Note: no problem if we add a stop if there's already one
         Log(
           'Previous location old enough (' +
@@ -96,28 +102,30 @@ const uploadWithNoNewPoints = async (user, force) => {
   }
 }
 
-const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
+// TODO: refacto this part
+const uploadPoints = async (points, user, lastBatchPoint, isLastBatch) => {
   const contentToUpload = []
   const uuidsToDelete = []
+
+  if (points.length > 0) {
+    Log(
+      'upload points from ' +
+        points[0]?.timestamp +
+        ' - to ' +
+        points[points.length - 1]?.timestamp
+    )
+  }
 
   for (let i = 0; i < points.length; i++) {
     const point = points[i]
     uuidsToDelete.push(point.uuid)
-    if (points.length > 0) {
-      Log(
-        'upload points from ' +
-          points[0]?.timestamp +
-          ' - to ' +
-          points[points.length - 1]?.timestamp
-      )
-    }
+
     const previousPoint =
       i === 0 // Handles setting up the case for the first point
-        ? lastPoint // Can be undefined
+        ? lastBatchPoint // Can be undefined
         : points[i - 1]
 
     // ----- Step 1: Decide if transitions should be added
-    let startNewTrip = false
     if (!previousPoint) {
       Log(
         'No previous point found, adding start at ' +
@@ -125,13 +133,11 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
           's'
       )
       await addStartTransitions(contentToUpload, getTs(point) - 1)
-      startNewTrip = true
     } else {
       const deltaT = getTs(point) - getTs(previousPoint)
-      if (deltaT > timeToAddStopTransitionsSec) {
-        // If the points are not close enough in time, we need to check that there was significant movement
+      if (deltaT > maxTemporalDeltaBetweenPoints) {
         Log(
-          'Noticed a break: ' +
+          'Noticed very long break: ' +
             deltaT +
             's at ' +
             new Date(1000 * getTs(previousPoint)),
@@ -140,23 +146,29 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
             ' and ' +
             new Date(1000 * getTs(point))
         )
-        const distance = getDistanceFromLatLonInM(previousPoint, point)
-        Log('Distance between points : ' + distance)
-        if (distance < maxDistanceDeltaToRestart) {
-          Log('Add manual stop/start because of small distance')
-          // TO DO: what is the smallest distance needed? Is it a function of the time stopped?
+        // Force a stop/start transition when the temporal delta is too high
+        // Note forcing the transition won't automatically create a new trip, typically a long-distance
+        // flight of 12h+ should behave as one trip, even with this transition.
+        await addStopTransitions(contentToUpload, getTs(previousPoint) + 1)
+        await addStartTransitions(contentToUpload, getTs(point) - 1)
+      } else if (deltaT > largeTemporalDeltaBetweenPoints) {
+        const distanceM = getDistanceFromLatLonInM(previousPoint, point)
+        Log('Distance between points : ' + distanceM)
+        const speed = distanceM / deltaT
+
+        if (speed < minSpeedBetweenDistantPoints) {
+          Log('Very slow speed: force transition')
           await addStopTransitions(contentToUpload, getTs(previousPoint) + 1)
           await addStartTransitions(contentToUpload, getTs(point) - 1)
-          startNewTrip = true
         } else {
-          Log('Long distance, leaving uninterrupted trip: ' + distance + 'm')
+          Log('Long distance, leaving uninterrupted trip: ' + distanceM + 'm')
         }
       }
     }
 
     // -----Step 2: Add location points and motion activity
 
-    if (!startNewTrip && i === 0) {
+    if (i === 0) {
       // Add a start transition when it's the first point of the batch, and no start transition had been set
       const lastStartTransitionTs = await getLastStartTransitionTs()
       const lastStopTransitionTs = await getLastStopTransitionTs()
@@ -177,13 +189,13 @@ const uploadPoints = async (points, user, lastPoint, isLastBatch) => {
     addMotionActivity(contentToUpload, previousPoint, point)
   }
 
-  // -----Step 3: Force end trip for the last point, as the device had been stopped long enough
+  // -----Step 3: Force end trip for the last point, as the device had been stopped long enough after motion
   if (isLastBatch) {
     // Force a stop transition for the last point
-    const lastBatchPoint = points[points.length - 1]
-    const deltaLastPoint = Date.now() / 1000 - getTs(lastBatchPoint)
+    const lastPoint = points[points.length - 1]
+    const deltaLastPoint = Date.now() / 1000 - getTs(lastPoint)
     Log('Delta last point : ' + deltaLastPoint)
-    await addStopTransitions(contentToUpload, getTs(lastBatchPoint) + 180)
+    await addStopTransitions(contentToUpload, getTs(lastPoint) + 1)
   }
 
   // -----Step 4: Upload data
@@ -260,6 +272,7 @@ const addPoint = (content, point, filtered) => {
 const addMotionActivity = (content, previousPoint, point) => {
   if (!previousPoint || previousPoint.activity?.type !== point.activity?.type) {
     // Add new activity type when it's the first point, or when a new motion activity type (i.e. mode) is detected
+    // TODO: might be more relevant to use the activity events
     const motionActivity = translateToEMissionMotionActivityPoint(point)
     content.push(motionActivity)
   }
