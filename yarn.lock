@@ -5475,22 +5475,27 @@ react-is@^17.0.1:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-17.0.2.tgz#e691d4a8e9c789365655539ab372762b0efb54f0"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-native-background-fetch@^4.1.10, react-native-background-fetch@~4.1.10:
+react-native-background-fetch@^4.1.10:
   version "4.1.10"
   resolved "https://registry.yarnpkg.com/react-native-background-fetch/-/react-native-background-fetch-4.1.10.tgz#12c7e85140af67fb05edb7cd9960e4f09a457797"
   integrity sha512-Ug54vTctZuD/c06ZLk/VyvFdhw/hCVVOHYR5heyMqc6FlT/m9fVhFWyl4uH3JmPCzmWDVR3fO28CzrGpKOrusw==
 
-react-native-background-geolocation@^4.12.1:
-  version "4.12.1"
-  resolved "https://registry.yarnpkg.com/react-native-background-geolocation/-/react-native-background-geolocation-4.12.1.tgz#182ac76ee2d44008aee3d9d74cca4234104adc84"
-  integrity sha512-0ZjFQdoTClCOSbhEDrq/7xpZf9Yt6xi1ryWBOPkvXo/sO7P0a8+ZYRejXJFm4vy8QK5r5q4BzQRuGM51ycHcsA==
-  dependencies:
-    react-native-background-fetch "~4.1.10"
+react-native-background-fetch@~4.2.1:
+  version "4.2.1"
+  resolved "https://registry.yarnpkg.com/react-native-background-fetch/-/react-native-background-fetch-4.2.1.tgz#81351355973f676295cfbb7a7946d7d4902273b6"
+  integrity sha512-UePBlP2Az6PWrIDCoGDYl0IlimvV+TFl/5XUmL4KIo7xPK7TSZru1nYHH7uskW2an5AW39ko3mbV2w/+1LxsnQ==
 
-react-native-device-info@^10.8.0:
-  version "10.8.0"
-  resolved "https://registry.yarnpkg.com/react-native-device-info/-/react-native-device-info-10.8.0.tgz#c331c94d65542f86bac197f223ee064c7e10a9ec"
-  integrity sha512-DE4/X82ZVhdcnR1Y21iTP46WSSJA/rHK3lmeqWfGGq1RKLwXTIdxmfbZZnYwryqJ+esrw2l4ND19qlgxDGby8A==
+react-native-background-geolocation@^4.13.3:
+  version "4.13.3"
+  resolved "https://registry.yarnpkg.com/react-native-background-geolocation/-/react-native-background-geolocation-4.13.3.tgz#ed7b6f21d047464c9a9e998764c6c496ebde9301"
+  integrity sha512-JCulQH7b7jsoFnTKLrp/lO1xtudOiFjP4p/fToHfvbMX5djfYLIQcWLNOMP5ABHVknXJ63kwNuRwOahM8jp79Q==
+  dependencies:
+    react-native-background-fetch "~4.2.1"
+
+react-native-device-info@^10.11.0:
+  version "10.11.0"
+  resolved "https://registry.yarnpkg.com/react-native-device-info/-/react-native-device-info-10.11.0.tgz#2c9f378f1c3c5eb9aafa803d015b84325991a9aa"
+  integrity sha512-qRzhuYOm5ZXQi5dhfJFjDq157oipxcEW/fo0QyMm5+TI6V6/+P/tju+Hif6z0rpLCf7MV7iDVRv2Kqha4D/yvQ==
 
 react-native@0.72.3:
   version "0.72.3"
