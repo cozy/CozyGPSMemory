@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GeoJSON on OpenStreetMap</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+</head>
+<body>
+    <div id="map" style="width: 100%; height: 500px;"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([0, 0], 2); // [0, 0] est le centre initial et 2 est le niveau de zoom initial
+
+        let allLayers = L.featureGroup();
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        fetch('/geojson.json')
+            .then(response => response.json())
+            .then(data => {
+                if (data.timeline) {
+                    data.timeline.forEach(item => {
+                        console.log('item : ', item)
+                        let geoLayer = L.geoJSON(item);
+                        geoLayer.addTo(map);
+                        allLayers.addLayer(geoLayer);
+                    });
+                } else {
+                    const geoLayer = L.geoJSON(data);
+                    geoLayer.addTo(map);
+                    allLayers.addLayer(geoLayer);
+                }
+                map.fitBounds(allLayers.getBounds());
+            });
+    </script>
+</body>
+</html>

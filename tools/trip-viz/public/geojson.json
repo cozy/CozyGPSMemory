@@ -1,0 +1,55 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -0.127758,
+          51.507351
+        ]
+      },
+      "properties": {
+        "name": "London"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -0.138321,
+              51.502781
+            ],
+            [
+              -0.125503,
+              51.502542
+            ],
+            [
+              -0.116852,
+              51.507743
+            ],
+            [
+              -0.117981,
+              51.512679
+            ],
+            [
+              -0.131104,
+              51.513845
+            ],
+            [
+              -0.138321,
+              51.502781
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "name": "Polygon around Central London"
+      }
+    }
+  ]
+}
