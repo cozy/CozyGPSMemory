@@ -2,11 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import BackgroundGeolocation from 'react-native-background-geolocation'
 
 import { uploadData, getFlagFailUpload } from './upload'
-import { StorageKeys } from '../../src/libs/localStorage/storage'
+import {
+  StorageKeys,
+  storeData,
+  getData
+} from '../../src/libs/localStorage/storage'
 import { Log } from '../helpers'
 
 export { getAllLogs, sendLogFile } from '../helpers'
-export { getId, updateId } from './user'
+export { getId, getOrCreateId, updateId } from './user'
 export { uploadData } from './upload'
 
 const waitBeforeStopMotionEventMin = 10 // Align with openpath: https://github.com/e-mission/e-mission-server/blob/master/emission/analysis/intake/segmentation/trip_segmentation.py#L59
@@ -38,6 +42,7 @@ export const startTracking = async () => {
       foregroundService: true
     })
     await BackgroundGeolocation.start()
+    await storeData(StorageKeys.ShouldBeTrackingFlagStorageAdress, true)
 
     return true
   } catch {
@@ -49,6 +54,7 @@ export const stopTracking = async () => {
   try {
     if ((await BackgroundGeolocation.getState()).enabled) {
       await BackgroundGeolocation.stop()
+      await storeData(StorageKeys.ShouldBeTrackingFlagStorageAdress, false)
       Log('Turned off tracking, uploading...')
       await uploadData({ force: true }) // Forced end, but if fails no current solution (won't retry until turned back on)
     } else {
@@ -103,4 +109,21 @@ export const clearAllCozyGPSMemoryData = async () => {
   // await clearOldCozyGPSMemoryStorage()
   await BackgroundGeolocation.logger.destroyLog()
   Log('Everything cleared')
+}
+
+export const stopTrackingAndClearData = async () => {
+  await stopTracking()
+  await BackgroundGeolocation.destroyLocations()
+  await BackgroundGeolocation.logger.destroyLog()
+  await AsyncStorage.multiRemove([
+    StorageKeys.IdStorageAdress,
+    StorageKeys.FlagFailUploadStorageAdress,
+    StorageKeys.LastPointUploadedAdress,
+    StorageKeys.ShouldBeTrackingFlagStorageAdress
+  ])
+  Log('Tracking stopped and everything cleared')
+}
+
+export const getShouldStartTracking = async () => {
+  return await getData(StorageKeys.ShouldBeTrackingFlagStorageAdress)
 }

@@ -11,6 +11,10 @@ const useUniqueDeviceId = false
 const serverURL = 'https://openpath.cozycloud.cc'
 
 export const getId = async () => {
+  return await getData(StorageKeys.IdStorageAdress)
+}
+
+export const getOrCreateId = async () => {
   try {
     let value = await getData(StorageKeys.IdStorageAdress)
     if (value == undefined) {
@@ -19,9 +23,6 @@ export const getId = async () => {
         ? await getUniqueId()
         : Math.random().toString(36).replace('0.', '')
       await storeId(value) // random Id or device Id depending on config
-      if (value != (await getData(StorageKeys.IdStorageAdress))) {
-        throw new Error("New Id couldn't be stored") // We make sure it is stored
-      }
       Log('Set Id to: ' + value)
     }
 
@@ -55,9 +56,6 @@ export const updateId = async newId => {
 
   if (newId.length > 2 && newId != (await getId())) {
     await storeId(newId)
-    if (newId != (await getId())) {
-      return 'FAIL_STORING_ID'
-    }
     try {
       await createUser(newId)
       return 'SUCCESS_STORING_SUCCESS_CREATING'

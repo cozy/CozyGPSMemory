@@ -27,7 +27,7 @@ import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import {
   uploadData,
-  getId,
+  getOrCreateId,
   clearAllCozyGPSMemoryData,
   updateId,
   getAllLogs,
@@ -42,10 +42,8 @@ function GeolocationSwitch() {
   const [enabled, setEnabled] = React.useState(false);
   const Toggle = () => {
     if (!enabled) {
-      AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'true');
       startTracking();
     } else {
-      AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'false');
       stopTracking();
     }
     setEnabled(previousState => !previousState);
@@ -57,7 +55,7 @@ function GeolocationSwitch() {
         StorageKeys.ShouldBeTrackingFlagStorageAdress,
       );
       if (value !== undefined && value !== null) {
-        if (value == 'true') {
+        if (value == 'true' || value == '"true"') {
           setEnabled(true);
           startTracking();
         } else {
@@ -98,7 +96,7 @@ function App(): JSX.Element {
   const [PopUpVisible, setPopUpVisible] = useState(false);
   const [idInputPopupVisible, setIdInputPopupVisible] = useState(false);
   const DisplayIdInputPopup = async () => {
-    setIdBoxTest((await getId()) || '');
+    setIdBoxTest((await getOrCreateId()) || '');
     setIdInputPopupVisible(true);
   };
   const ForceUploadMobility = async () => {
@@ -179,7 +177,7 @@ function App(): JSX.Element {
 
           <Button
             onPress={async function () {
-              let idToCopy = await getId();
+              let idToCopy = await getOrCreateId();
               if (idToCopy == undefined) {
                 idToCopy = 'undefinedId';
               }
