@@ -2,12 +2,12 @@ import { AppRegistry } from 'react-native'
 import BackgroundGeolocation from 'react-native-background-geolocation'
 
 import App from './App'
+import { name as appName } from './app.json'
+import { Log } from './geolocation/helpers'
 import {
-  Log,
   handleMotionChange,
   handleConnectivityChange
 } from './geolocation/services'
-import { name as appName } from './app.json'
 
 AppRegistry.registerComponent(appName, () => App)
 
