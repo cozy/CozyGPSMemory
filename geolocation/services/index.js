@@ -12,6 +12,7 @@ import { Log } from '../helpers'
 export { getAllLogs, sendLogFile } from '../helpers'
 export { getId, getOrCreateId, updateId } from './user'
 export { uploadData } from './upload'
+export { GeolocationTrackingHeadlessTask } from './headless'
 
 const waitBeforeStopMotionEventMin = 10 // Align with openpath: https://github.com/e-mission/e-mission-server/blob/master/emission/analysis/intake/segmentation/trip_segmentation.py#L59
 
