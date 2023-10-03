@@ -104,7 +104,9 @@ export const clearAllCozyGPSMemoryData = async () => {
   await AsyncStorage.multiRemove([
     StorageKeys.IdStorageAdress,
     StorageKeys.FlagFailUploadStorageAdress,
-    StorageKeys.LastPointUploadedAdress
+    StorageKeys.LastPointUploadedAdress,
+    StorageKeys.LastStopTransitionTsKey,
+    StorageKeys.LastStartTransitionTsKey
   ])
   // Only exception : ShouldBeTrackingFlagStorageAdress, don't know the effects on the switch and would not feel natural anyway
   // await clearOldCozyGPSMemoryStorage()
@@ -120,7 +122,9 @@ export const stopTrackingAndClearData = async () => {
     StorageKeys.IdStorageAdress,
     StorageKeys.FlagFailUploadStorageAdress,
     StorageKeys.LastPointUploadedAdress,
-    StorageKeys.ShouldBeTrackingFlagStorageAdress
+    StorageKeys.ShouldBeTrackingFlagStorageAdress,
+    StorageKeys.LastStopTransitionTsKey,
+    StorageKeys.LastStartTransitionTsKey
   ])
   Log('Tracking stopped and everything cleared')
 }
