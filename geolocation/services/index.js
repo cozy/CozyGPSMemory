@@ -40,7 +40,11 @@ export const startTracking = async () => {
       autoSync: false, // <-- [Default: true] Set true to sync each location to server as it arrives.
       stopOnTerminate: false, // Allow the background-service to continue tracking when user closes the app, for Android. Maybe also useful for ios https://transistorsoft.github.io/react-native-background-geolocation/interfaces/config.html#stoponterminate
       enableHeadless: true,
-      foregroundService: true
+      foregroundService: true,
+      backgroundPermissionRationale: {
+        message:
+          'Mémoriser vos déplacements nécessite de ≪ {backgroundPermissionOptionLabel} ≫'
+      }
     })
     await BackgroundGeolocation.start()
     await storeData(StorageKeys.ShouldBeTrackingFlagStorageAdress, true)
