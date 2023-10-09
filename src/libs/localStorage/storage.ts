@@ -48,6 +48,6 @@ export const clearData = async (): Promise<void> => {
       await removeItem(key)
     }
   } catch (error) {
-    log.error(`Failed to clear data from persistent storage`, error)
+    console.log(`Failed to clear data from persistent storage`, error)
   }
 }
