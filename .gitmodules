@@ -1,0 +1,3 @@
+[submodule "cozy-flagship-app"]
+	path = cozy-flagship-app
+	url = https://github.com/cozy/cozy-flagship-app/
