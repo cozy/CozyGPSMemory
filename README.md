@@ -5,10 +5,15 @@ Track your trips to visualize them later on your Cozy.
 # Dev
 
 ```
+git submodule init
+git submodule update
 yarn
 yarn start
 ```
 
+We added cozy-flagship-app as a submodule to centralize tracking logic quickly.
+
+If you want to update cozy-flagship-app, run `git submodule update --remote cozy-flagship-app`.
 
 # Tools
 
