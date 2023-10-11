@@ -21,7 +21,7 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { StorageKeys } from './src/libs/localStorage/storage'
+import { StorageKeys } from './cozy-flagship-app/src/libs/localStore/storage'
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
@@ -34,7 +34,7 @@ import {
   sendLogFile,
   startTracking,
   stopTracking,
-} from './geolocation/services';
+} from './cozy-flagship-app/src/app/domain/geolocation/tracking';
 
 const devMode = true;
 
