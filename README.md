@@ -17,25 +17,38 @@ If you want to update cozy-flagship-app, run `git submodule update --remote cozy
 
 # Tools
 
-Visualize your GeoJSON trips stored in `public/geojson.json`
+Visualize your GeoJSON trips stored in `public/geojson.json`.
+
 
 ## Run
 
-From this directory:
-
 
 ```sh
-yarn
-node server.js
+# Only first time
+cp tools/trip-viz/public/geojson.json.sample cp tools/trip-viz/public/geojson.json
+
+# Run server
+yarn server-viz
 ```
 
 ## Get the trips
 
-The file in which you should store the GeoJSON is `public/geojson.json`
+The file in which you should store the GeoJSON is `public/geojson.json`.
 
-There are 2 supported formats, depending on if you want to display one or multiple trips:
 
-### Single trip
+The simplest method to populate this file is running the script
+```sh
+./tools/data-viz/scripts/get-emission-geojson.sh <userID> <date> [server_url]
+```
+
+This will fetch the trips stored in the given `server_url` (default is http://localhost:8080), 
+on the given user and date (format YYYY-MM-DD).
+
+### Data format
+
+There are 2 supported formats for the geojson.json file, depending on if you want to display one or multiple trips:
+
+#### Single trip
 
 This corresponds to a standard GeoJSON, for instance: 
 
@@ -77,7 +90,7 @@ This corresponds to a standard GeoJSON, for instance:
 ```
 
 
-### Mutli trips
+#### Mutli trips
 
 The format is the following and corresponds to the raw response of an openpath server on `https://<url>/timeline/getTrips/<YYYY-mm-dd>`: 
 
