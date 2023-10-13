@@ -98,3 +98,16 @@ The format is the following and corresponds to the raw response of an openpath s
 ```
 
 
+# Simulation
+
+You can generate trips to an e-mission server, thanks to the simulator.
+
+Edit the variables at the bottom of `tools/simulation/index.js` to your convenience.
+
+## Run
+
+```sh
+cd tools/simulation
+node index.js
+```
+
