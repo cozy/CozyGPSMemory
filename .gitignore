@@ -64,3 +64,6 @@ yarn-error.log
 
 # testing
 /coverage
+
+# Geojson file to display
+tools/trip-viz/public/geojson.json
