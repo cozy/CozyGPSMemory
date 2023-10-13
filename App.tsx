@@ -6,6 +6,7 @@
  */
 
 import React, {useState} from 'react';
+import RNPickerSelect from 'react-native-picker-select';
 
 import {
   Button,
@@ -17,6 +18,7 @@ import {
   useColorScheme,
   View,
   Switch,
+  Platform
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,6 +26,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageKeys } from './cozy-flagship-app/src/libs/localStore/storage'
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
+
+import BackgroundGeolocation from 'react-native-background-geolocation';
 
 import {
   uploadData,
@@ -34,9 +38,35 @@ import {
   sendLogFile,
   startTracking,
   stopTracking,
+  getTrackingConfig,
+  setTrackingConfig
 } from './cozy-flagship-app/src/app/domain/geolocation/tracking';
 
 const devMode = true;
+
+const AccuracySelect = ({ value, onValueChange }) => {
+  const items = Platform.OS === 'ios' ? [
+    { label: 'NAVIGATION (GPS + Wifi + Cellular)', value: BackgroundGeolocation.DESIRED_ACCURACY_NAVIGATION.toString() },
+    { label: 'HIGH (GPS + Wifi + Cellular)', value: BackgroundGeolocation.DESIRED_ACCURACY_HIGH.toString() },
+    { label: 'MEDIUM (Wifi + Cellular)', value: BackgroundGeolocation.DESIRED_ACCURACY_MEDIUM.toString() },
+    { label: 'LOW (Wifi (low power) + Cellular)', value: BackgroundGeolocation.DESIRED_ACCURACY_LOW.toString() },
+    { label: 'VERY_LOW (Cellular only)', value: BackgroundGeolocation.DESIRED_ACCURACY_VERY_LOW.toString() },
+    { label: 'LOWEST ()', value: BackgroundGeolocation.DESIRED_ACCURACY_LOWEST.toString() }
+  ] : [
+    { label: 'HIGH (GPS + Wifi + Cellular)', value: BackgroundGeolocation.DESIRED_ACCURACY_HIGH.toString() },
+    { label: 'MEDIUM (Wifi + Cellular)', value: BackgroundGeolocation.DESIRED_ACCURACY_MEDIUM.toString() },
+    { label: 'LOW (Wifi (low power) + Cellular)', value: BackgroundGeolocation.DESIRED_ACCURACY_LOW.toString() },
+    { label: 'VERY_LOW (Cellular only)', value: BackgroundGeolocation.DESIRED_ACCURACY_VERY_LOW.toString() }
+  ] 
+
+  return (
+      <RNPickerSelect
+          onValueChange={onValueChange}
+          items={items}
+          value={value}
+      />
+  );
+};
 
 function GeolocationSwitch() {
   const [enabled, setEnabled] = React.useState(false);
@@ -82,6 +112,64 @@ function GeolocationSwitch() {
         Tracking
       </Text>
       <Switch value={enabled} onValueChange={Toggle} />
+    </View>
+  );
+}
+
+function GeolocationConfig({ onUpdated }) {
+  const [ distanceFilter, setDistanceFilter] = React.useState('');
+  const [ elasticityMultiplier, setElasticityMultiplier] = React.useState('');
+  const [ desiredAccuracy, setDesiredAccuracy] = React.useState('');
+
+  React.useEffect(() => {
+    const setInitialTrackingConfig = async () => {
+      const trackingConfig = await getTrackingConfig()
+
+      console.log(trackingConfig)
+
+      setDistanceFilter(trackingConfig.distanceFilter.toString())
+      setElasticityMultiplier(trackingConfig.elasticityMultiplier.toString())
+      setDesiredAccuracy(trackingConfig.desiredAccuracy.toString())
+
+    };
+    setInitialTrackingConfig();
+  }, []);
+
+  const saveTrackingConfig = async () => {
+    await setTrackingConfig({
+      distanceFilter: parseInt(distanceFilter, 10),
+      elasticityMultiplier: parseInt(elasticityMultiplier, 10),
+      desiredAccuracy: parseInt(desiredAccuracy, 10)
+    })
+    onUpdated()
+  }
+
+  return (
+    <View style={{display: 'flex', flexDirection: 'column'}}>
+      <View style={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
+        <Text>Distance filter</Text>
+        <TextInput
+          style={{ borderWidth: 1, height: 30, padding: 5, marginLeft: 5 }}
+          onChangeText={setDistanceFilter}
+          value={distanceFilter}
+          keyboardType="numeric"
+        />
+      </View>
+      <View style={{display: 'flex', flexDirection: 'row'}}>
+        <Text>Elasticity multiplier</Text>
+        <TextInput
+          style={{ borderWidth: 1, height: 30, padding: 5, marginLeft: 5 }}
+          onChangeText={setElasticityMultiplier}
+          value={elasticityMultiplier}
+          keyboardType="numeric"
+        />
+      </View>
+      <AccuracySelect value={desiredAccuracy} onValueChange={setDesiredAccuracy} />
+      <Button
+        title="Sauvegarder la configuration"
+        color="goldenrod"
+        onPress={() => saveTrackingConfig()}
+      />
     </View>
   );
 }
@@ -167,14 +255,14 @@ function App(): JSX.Element {
     <SafeAreaView style={backgroundStyle}>
       <View
         style={{
-          backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          paddingVertical: 200,
-          justifyContent: 'center',
-          alignContent: 'center',
+          backgroundColor: isDarkMode ? Colors.black : Colors.white
         }}>
         <View>
           <GeolocationSwitch />
-
+          <GeolocationConfig
+            onUpdated={() => { MakePopup('Config mise à jour') }}
+          />
+          <View style={{ height: 10}}></View>
           <Button
             onPress={async function () {
               let idToCopy = await getOrCreateId();
