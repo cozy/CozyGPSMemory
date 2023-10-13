@@ -1,0 +1,13 @@
+{
+  "name": "trip-simulator",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Generate random trips",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "date-fns": "^2.30.0"
+  }
+}
