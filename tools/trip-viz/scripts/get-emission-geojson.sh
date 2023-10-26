@@ -12,11 +12,16 @@ DATE="$2"
 # If server_url is provided use that, otherwise default to http://localhost:8080
 SERVER_URL=${3:-http://localhost:8080}
 
+
+cmd="curl -s -X POST -H 'Content-Type: application/json' $SERVER_URL/timeline/getTrips/$DATE --data '{ \"user\": \"$USERID\" }'"
+echo $cmd
 # Make the curl request
 RESPONSE=$(curl -s -X POST -H 'Content-Type: application/json' "$SERVER_URL/timeline/getTrips/$DATE" --data "{ \"user\": \"$USERID\" }")
 
 # Write the result to the specified file
 echo "$RESPONSE" > tools/trip-viz/public/geojson.json
+
+echo "$RESPONSE"
 
 # Notify user of completion
 echo "Data written to tools/trip-viz/public/geojson.json"
