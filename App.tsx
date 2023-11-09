@@ -188,7 +188,7 @@ function App(): JSX.Element {
     setIdInputPopupVisible(true);
   };
   const ForceUploadMobility = async () => {
-    if (await uploadData(true)) {
+    if (await uploadData({force: true})) {
       MakePopup('✅ All mobility measures uploaded!');
     } else {
       MakePopup('❌ There are still local positions');
@@ -405,3 +405,4 @@ const styles = StyleSheet.create({
 });
 
 export default App;
+
