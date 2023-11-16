@@ -25,14 +25,13 @@ fetch('/geojson.json')
         })
         geoLayer.addTo(map)
         allLayers.addLayer(geoLayer)
-
-        displayInfo(geo)
+        displayInfo(geo, index)
       })
     } else {
       const geoLayer = L.geoJSON(data)
       geoLayer.addTo(map)
       allLayers.addLayer(geoLayer)
-      displayInfo(data)
+      displayInfo(data, 0)
     }
     map.fitBounds(allLayers.getBounds())
 
@@ -42,7 +41,7 @@ fetch('/geojson.json')
     console.log(err)
   })
 
-function displayInfo(geojson) {
+function displayInfo(geojson, index) {
   let displayData = ''
 
   let properties = geojson.properties
@@ -51,6 +50,7 @@ function displayInfo(geojson) {
   let duration = (properties.duration / 60).toFixed(2) // Convert to minutes
   let distance = (properties.distance / 1000).toFixed(2) // Convert to km
 
+  displayData += `<h3>Trip summary ${index + 1}:</h3>`
   displayData += `<p>Start Date: ${start_date}</p>`
   displayData += `<p>End Date: ${end_date}</p>`
   displayData += `<p>Duration: ${duration} minutes</p>`
@@ -79,7 +79,7 @@ function displayInfo(geojson) {
     displayData += `<p>Duration: ${section_duration} minutes</p>`
     displayData += `<p>Distance: ${section_distance} km</p>`
     displayData += `<p>Transport Mode: ${transport_mode}</p>`
-
-    document.getElementById('info').innerHTML += displayData
   })
+  displayData += '<hr />'
+  document.getElementById('info').innerHTML += displayData
 }
