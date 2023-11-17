@@ -16,11 +16,16 @@
     "@react-native-clipboard/clipboard": "^1.11.2",
     "@react-native-picker/picker": "^2.5.1",
     "cozy-minilog": "^3.3.1",
+    "i18next": "^23.7.6",
+    "intl": "^1.2.5",
+    "intl-pluralrules": "^2.0.1",
     "react": "18.2.0",
+    "react-i18next": "^13.5.0",
     "react-native": "0.72.3",
     "react-native-background-fetch": "^4.1.10",
     "react-native-background-geolocation": "^4.13.3",
     "react-native-device-info": "^10.11.0",
+    "react-native-localize": "^3.0.3",
     "react-native-picker-select": "^8.1.0"
   },
   "devDependencies": {
