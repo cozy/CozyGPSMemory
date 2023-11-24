@@ -125,8 +125,6 @@ function GeolocationConfig({ onUpdated }) {
     const setInitialTrackingConfig = async () => {
       const trackingConfig = await getTrackingConfig()
 
-      console.log(trackingConfig)
-
       setDistanceFilter(trackingConfig.distanceFilter.toString())
       setElasticityMultiplier(trackingConfig.elasticityMultiplier.toString())
       setDesiredAccuracy(trackingConfig.desiredAccuracy.toString())
