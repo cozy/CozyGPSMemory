@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import RNPickerSelect from 'react-native-picker-select';
 
 import {
@@ -69,7 +69,7 @@ const AccuracySelect = ({ value, onValueChange }) => {
 };
 
 function GeolocationSwitch() {
-  const [enabled, setEnabled] = React.useState(false);
+  const [enabled, setEnabled] = useState(false);
   const Toggle = () => {
     if (!enabled) {
       startTracking();
@@ -79,7 +79,7 @@ function GeolocationSwitch() {
     setEnabled(previousState => !previousState);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkAsync = async () => {
       const value = await AsyncStorage.getItem(
         StorageKeys.ShouldBeTrackingFlagStorageAdress,
@@ -117,11 +117,11 @@ function GeolocationSwitch() {
 }
 
 function GeolocationConfig({ onUpdated }) {
-  const [ distanceFilter, setDistanceFilter] = React.useState('');
-  const [ elasticityMultiplier, setElasticityMultiplier] = React.useState('');
-  const [ desiredAccuracy, setDesiredAccuracy] = React.useState('');
+  const [ distanceFilter, setDistanceFilter] = useState('');
+  const [ elasticityMultiplier, setElasticityMultiplier] = useState('');
+  const [ desiredAccuracy, setDesiredAccuracy] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     const setInitialTrackingConfig = async () => {
       const trackingConfig = await getTrackingConfig()
 
