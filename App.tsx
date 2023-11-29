@@ -39,7 +39,7 @@ import {
   startTracking,
   stopTracking,
   getTrackingConfig,
-  setTrackingConfig
+  saveTrackingConfig
 } from './cozy-flagship-app/src/app/domain/geolocation/tracking';
 
 const devMode = true;
@@ -133,8 +133,8 @@ function GeolocationConfig({ onUpdated }) {
     setInitialTrackingConfig();
   }, []);
 
-  const saveTrackingConfig = async () => {
-    await setTrackingConfig({
+  const saveConfig = async () => {
+    await saveTrackingConfig({
       distanceFilter: parseInt(distanceFilter, 10),
       elasticityMultiplier: parseInt(elasticityMultiplier, 10),
       desiredAccuracy: parseInt(desiredAccuracy, 10)
@@ -166,7 +166,7 @@ function GeolocationConfig({ onUpdated }) {
       <Button
         title="Sauvegarder la configuration"
         color="goldenrod"
-        onPress={() => saveTrackingConfig()}
+        onPress={() => saveConfig()}
       />
     </View>
   );
