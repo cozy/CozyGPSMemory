@@ -5,21 +5,48 @@
   <meta charset="UTF-8">
   <title>Map App</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    } 
+    input,
+    button {
+      padding: 5px;
+      margin: 10px 0;
+    }
+  </style>
 </head>
 
 <body>
-  <form id="coordinatesForm">
-    <label for="latitude">Latitude:</label>
-    <input type="text" id="latitude" name="latitude" required>
-    <label for="longitude">Longitude:</label>
-    <input type="text" id="longitude" name="longitude" required>
-    <button type="submit">Show on Map</button>
-  </form>
-
+  <div>
+    <form id="coordinatesForm">
+      <label for="latitude">Latitude:</label>
+      <input type="text" id="latitude" name="latitude" required>
+      <label for="longitude">Longitude:</label>
+      <input type="text" id="longitude" name="longitude" required>
+      <button type="submit">Show on Map</button>
+    </form>
+  </div>
   <div id="map" style="height: 400px;"></div>
+
+  <div class="container">
+    <h2>GPS Distance Calculator</h2>
+    <form id="distanceForm">
+      <input type="text" id="lat1" placeholder="Latitude Point 1" required>
+      <input type="text" id="lon1" placeholder="Longitude Point 1" required>
+      <input type="text" id="lat2" placeholder="Latitude Point 2" required>
+      <input type="text" id="lon2" placeholder="Longitude Point 2" required>
+      <button type="submit">Calculate Distance</button>
+    </form>
+    <div id="distanceResult"></div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script src="./location.js"></script>
+
+  
 </body>
 
 </html>
