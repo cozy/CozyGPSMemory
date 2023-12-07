@@ -124,3 +124,101 @@ cd tools/simulation
 node index.js
 ```
 
+# Data models
+
+Here we detail the plugin data models
+
+## Location
+
+```
+{
+  "extras": {},
+  "battery": {
+    "level": 0.97,
+    "is_charging": false
+  },
+  "activity": {
+    "confidence": 100,
+    "type": "still"
+  },
+  "is_moving": true,
+  "age": 106,
+  "uuid": "64526feb-f82f-4518-9c7b-58105f938a6f",
+  "odometer": 417394.1875,
+  "coords": {
+    "age": 112,
+    "ellipsoidal_altitude": 98.5,
+    "altitude": 98.5,
+    "altitude_accuracy": 4.5,
+    "heading_accuracy": 10.77,
+    "heading": 39.2,
+    "speed": 9.77,
+    "accuracy": 6.8,
+    "longitude": 4.3246372,
+    "speed_accuracy": 1.78,
+    "latitude": 46.2748476
+  },
+  "timestamp": "2023-12-05T07:30:38.959Z"
+}
+```
+
+## Motion
+
+```
+{
+  "isMoving": true,
+  "location": {
+    "extras": {},
+    "battery": {
+      "level": 0.97,
+      "is_charging": false
+    },
+    "activity": {
+      "confidence": 100,
+      "type": "still"
+    },
+    "is_moving": true,
+    "uuid": "13a33769-5d4d-46ea-b68b-b123ada6f120",
+    "age": 6402,
+    "coords": {
+      "age": 6414,
+      "ellipsoidal_altitude": 95.6,
+      "altitude": 95.6,
+      "altitude_accuracy": 4.1,
+      "heading_accuracy": 5.4,
+      "heading": 52.89,
+      "speed": 7.83,
+      "accuracy": 3.9,
+      "longitude": 4.3246372,
+      "speed_accuracy": 1.2,
+      "latitude": 46.2748476
+    },
+    "timestamp": "2023-12-05T07:30:31.333Z",
+    "odometer": 417325.40625,
+    "event": "motionchange"
+  }
+}
+```
+
+## Activity
+
+```
+{
+  "confidence":100,
+  "activity":"in_vehicle"
+}
+```
+
+⚠️ On Android, this value is not relevant and is always 100. 
+
+### Activity types
+
+See https://transistorsoft.github.io/react-native-background-geolocation/interfaces/motionactivity.html#type
+
+- still
+- walking
+- on_foot
+- running
+- on_bicycle
+- in_vehicle
+- unknown
