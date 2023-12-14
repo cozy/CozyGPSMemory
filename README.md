@@ -117,6 +117,7 @@ Edit the variables at the bottom of `tools/simulation/index.js` to your convenie
 
 ```sh
 cd tools/simulation
+yarn
 node index.js
 ```
 
