@@ -16,12 +16,20 @@ SERVER_URL=${3:-http://localhost:8080}
 cmd="curl -s -X POST -H 'Content-Type: application/json' $SERVER_URL/timeline/getTrips/$DATE --data '{ \"user\": \"$USERID\" }'"
 echo $cmd
 # Make the curl request
-RESPONSE=$(curl -s -X POST -H 'Content-Type: application/json' "$SERVER_URL/timeline/getTrips/$DATE" --data "{ \"user\": \"$USERID\" }")
+response=$(curl -s -X POST -H 'Content-Type: application/json' "$SERVER_URL/timeline/getTrips/$DATE" --data "{ \"user\": \"$USERID\" }")
+
+# Check for no response
+if [ -z "$response" ]; then
+    echo "Error: No response from server"
+    exit 1
+fi
+
+# Check for empty data
+if [ "$response" = '{"timeline": []}' ]; then
+    echo "No data available on this day, for this user"
+    exit 0
+fi
 
 # Write the result to the specified file
-echo "$RESPONSE" > tools/trip-viz/public/geojson.json
-
-echo "$RESPONSE"
-
-# Notify user of completion
-echo "Data written to tools/trip-viz/public/geojson.json"
+echo "$response" > tools/trip-viz/public/geojson.json
+echo "Found trip, data written to tools/trip-viz/public/geojson.json"
