@@ -1,13 +1,13 @@
-import addSeconds from 'date-fns/addSeconds/index.js'
+const addSeconds = require('date-fns/addSeconds')
 
-import {
+const {
   createUser,
   makeStartTransitions,
   makeStopTransitions,
   translateToEMissionLocationPoint,
   translateToEMissionMotionActivityPoint,
   uploadToUsercache
-} from './tracking.js'
+} = require('./tracking.js')
 
 const DISTANCE_FILTER = 50 // meters
 
@@ -15,7 +15,6 @@ const BIKE_MODE = 'on_bicycle'
 const WALK_MODE = 'walking'
 const CAR_MODE = 'in_vehicle'
 const STILL_MODE = 'still'
-const UNKNOWN_MODE = 'unknown'
 
 const ALL_MOTION_MODES = [BIKE_MODE, WALK_MODE, CAR_MODE]
 

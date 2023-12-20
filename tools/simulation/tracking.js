@@ -31,7 +31,7 @@ const transition = (state, transition, transition_ts) => {
   }
 }
 
-export const makeStartTransitions = ts => {
+const makeStartTransitions = ts => {
   const transitions = []
   transitions.push(
     transition('STATE_WAITING_FOR_TRIP_START', 'T_EXITED_GEOFENCE', ts + 0.01)
@@ -49,7 +49,7 @@ export const makeStartTransitions = ts => {
   return transitions
 }
 
-export const makeStopTransitions = ts => {
+const makeStopTransitions = (ts, { withForceStop = false } = {}) => {
   const transitions = []
   transitions.push(
     transition('STATE_ONGOING_TRIP', 'T_VISIT_STARTED', ts + 0.01)
@@ -64,14 +64,23 @@ export const makeStopTransitions = ts => {
   transitions.push(
     transition('STATE_WAITING_FOR_TRIP_START', 'T_NOP', ts + 0.05)
   )
+  if (withForceStop) {
+    transitions.push(
+      transition(
+        'STATE_WAITING_FOR_TRIP_START',
+        'T_FORCE_STOP_TRACKING',
+        ts + 0.06
+      )
+    )
+  }
   transitions.push(
-    transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.06)
+    transition('STATE_WAITING_FOR_TRIP_START', 'T_DATA_PUSHED', ts + 0.07)
   )
 
   return transitions
 }
 
-export const translateToEMissionLocationPoint = location_point => {
+const translateToEMissionLocationPoint = location_point => {
   let ts = Math.floor(parseISOString(location_point.timestamp).getTime() / 1000)
   return {
     data: {
@@ -97,7 +106,7 @@ export const translateToEMissionLocationPoint = location_point => {
   }
 }
 
-export const translateToEMissionMotionActivityPoint = location => {
+const translateToEMissionMotionActivityPoint = location => {
   let ts = Math.floor(parseISOString(location.timestamp).getTime() / 1000)
 
   // See: https://transistorsoft.github.io/react-native-background-geolocation/interfaces/motionactivity.html#type
@@ -131,15 +140,16 @@ export const translateToEMissionMotionActivityPoint = location => {
   }
 }
 
-export const uploadToUsercache = async (serverURL, userID, content) => {
+const uploadToUsercache = async (serverURL, userID, content) => {
   const request = {
     user: userID,
     phone_to_server: content
   }
+  console.log('Upload : ', JSON.stringify(request))
   return upload(serverURL, request)
 }
 
-export const upload = async (serverURL, request) => {
+const upload = async (serverURL, request) => {
   try {
     const response = await fetch(serverURL + '/usercache/put', {
       method: 'POST',
@@ -164,7 +174,7 @@ export const upload = async (serverURL, request) => {
   }
 }
 
-export const createUser = async (serverURL, user) => {
+const createUser = async (serverURL, user) => {
   let response = await fetch(serverURL + '/profile/create', {
     method: 'POST',
     headers: {
@@ -183,4 +193,13 @@ export const createUser = async (serverURL, user) => {
       'Success creating user ' + user + ', UUID: ' + jsonTokenResponse.uuid
     )
   }
+}
+
+module.exports = {
+  makeStartTransitions,
+  makeStopTransitions,
+  uploadToUsercache,
+  createUser,
+  translateToEMissionLocationPoint,
+  translateToEMissionMotionActivityPoint
 }
