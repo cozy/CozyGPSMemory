@@ -16,6 +16,7 @@
     "@react-native-clipboard/clipboard": "^1.11.2",
     "@react-native-picker/picker": "^2.5.1",
     "cozy-minilog": "^3.3.1",
+    "events": "^3.3.0",
     "i18next": "^23.7.6",
     "intl": "^1.2.5",
     "intl-pluralrules": "^2.0.1",
