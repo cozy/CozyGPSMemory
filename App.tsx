@@ -23,14 +23,13 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { StorageKeys } from './cozy-flagship-app/src/libs/localStore/storage'
+import { CozyPersistedStorageKeys  } from './cozy-flagship-app/src/libs/localStore/storage'
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import BackgroundGeolocation from 'react-native-background-geolocation';
 
 import {
-  uploadData,
   getOrCreateId,
   clearAllCozyGPSMemoryData,
   updateId,
@@ -39,7 +38,9 @@ import {
   startTracking,
   stopTracking,
   getTrackingConfig,
-  saveTrackingConfig
+  saveTrackingConfig,
+  startOpenPathUploadAndPipeline,
+  storeFetchServiceWebHook
 } from './cozy-flagship-app/src/app/domain/geolocation/tracking';
 
 const devMode = true;
@@ -82,7 +83,7 @@ function GeolocationSwitch() {
   useEffect(() => {
     const checkAsync = async () => {
       const value = await AsyncStorage.getItem(
-        StorageKeys.ShouldBeTrackingFlagStorageAdress,
+        CozyPersistedStorageKeys.ShouldBeTrackingFlagStorageAdress,
       );
       if (value !== undefined && value !== null) {
         if (value == 'true' || value == '"true"') {
@@ -95,7 +96,7 @@ function GeolocationSwitch() {
       } else {
         setEnabled(false);
         stopTracking();
-        AsyncStorage.setItem(StorageKeys.ShouldBeTrackingFlagStorageAdress, 'false');
+        AsyncStorage.setItem(CozyPersistedStorageKeys.ShouldBeTrackingFlagStorageAdress, 'false');
       }
     };
     checkAsync();
@@ -181,15 +182,17 @@ function App(): JSX.Element {
 
   const [PopUpVisible, setPopUpVisible] = useState(false);
   const [idInputPopupVisible, setIdInputPopupVisible] = useState(false);
+  const [webhookInputPopupVisible, setWebhookInputPopupVisible] = useState(false);
   const DisplayIdInputPopup = async () => {
     setIdBoxTest((await getOrCreateId()) || '');
     setIdInputPopupVisible(true);
   };
   const ForceUploadMobility = async () => {
-    if (await uploadData({force: true})) {
-      MakePopup('✅ All mobility measures uploaded!');
+    const uploadedCount = await startOpenPathUploadAndPipeline({force: true})
+    if (uploadedCount > -1) {
+      MakePopup(`✅ ${uploadedCount} uploaded location points`);
     } else {
-      MakePopup('❌ There are still local positions');
+      MakePopup('❌ Upload failed, there are still local positions');
     }
   };
 
@@ -247,6 +250,10 @@ function App(): JSX.Element {
         MakePopup('❌ Unexpected error updating the user Id');
         break;
     }
+  }
+
+  const updateWebhook = async (webhookUrl) => {
+    await storeFetchServiceWebHook(webhookUrl)
   }
 
   return (
@@ -311,6 +318,11 @@ function App(): JSX.Element {
             title="Manually redefine secret Tracker Id"
             disabled={!devMode}
           />
+          <Button
+            onPress={() => setWebhookInputPopupVisible(true)}
+            title="Manually set webhook URL"
+            disabled={!devMode}
+          />
         </View>
         <Button
           onPress={async function () {
@@ -361,6 +373,44 @@ function App(): JSX.Element {
                 title="Validate"
                 onPress={async function () {
                   closeIdInputPopup();
+                  updateIdFromButton(IdBoxText);
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
+        { /* TODO: refactor */ }
+        <Modal
+          visible={webhookInputPopupVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setWebhookInputPopupVisible(false)}
+          style={{alignContent: 'center', justifyContent: 'center'}}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={{fontSize: 24, textAlign: 'center'}}>New Id</Text>
+              <TextInput
+                autoFocus={true}
+                value={IdBoxText}
+                onChangeText={setIdBoxTest}
+                selectTextOnFocus={true}
+                keyboardType="email-address"
+                style={{
+                  padding: 20,
+                  alignContent: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  fontSize: 18,
+                }}
+              />
+              <Button
+                title="Cancel (keep existing webhook)"
+                onPress={() => setWebhookInputPopupVisible(false)}
+              />
+              <Button
+                title="Validate"
+                onPress={async () => {
+                  setWebhookInputPopupVisible(false)
                   updateIdFromButton(IdBoxText);
                 }}
               />
