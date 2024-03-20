@@ -121,11 +121,11 @@ yarn
 node index.js
 ```
 
-# Data models
+# Data models
 
 Here we detail the plugin data models
 
-## Location
+## Location
 
 ```
 {
@@ -159,7 +159,7 @@ Here we detail the plugin data models
 }
 ```
 
-## Motion
+## Motion
 
 ```
 {
@@ -197,7 +197,7 @@ Here we detail the plugin data models
 }
 ```
 
-## Activity
+## Activity
 
 ```
 {

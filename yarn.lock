@@ -6868,10 +6868,15 @@ react-native-inappbrowser-reborn@^3.7.0:
     invariant "^2.2.4"
     opencollective-postinstall "^2.0.3"
 
-react-native-localize@^3.0.3:
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/react-native-localize/-/react-native-localize-3.0.3.tgz#31c880162bb9bb7e3768da2fd02dd55608dea60e"
-  integrity sha512-wlVIyg9lQac/Mg23aVKQAcnRkJgROjTUxZHFO4oqKpXkMa1XkvZ4DhhFc6TPnZX0O8YKvrTUsN3x8xMzVpAosg==
+react-native-ios11-devicecheck@^0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/react-native-ios11-devicecheck/-/react-native-ios11-devicecheck-0.0.3.tgz#2a9156a35f4aef8d5e196f9e49ceb89fce7f2a52"
+  integrity sha512-gi3tn6WPOrQazNjGr6+2QOejutubHWyDnrMobdfMAMz2SYz/g1H5mmWXxyoIXOK74C6lRYzBzpu+WYHgyxyMUA==
+
+react-native-localize@2.2.6:
+  version "2.2.6"
+  resolved "https://registry.yarnpkg.com/react-native-localize/-/react-native-localize-2.2.6.tgz#484f8c700bc629f230066e819265f80f6dd3ef58"
+  integrity sha512-EZETlC1ZlW/4g6xfsNCwAkAw5BDL2A6zk/08JjFR/GRGxYuKRD7iP1hHn1+h6DEu+xROjPpoNeXfMER2vkTVIQ==
 
 react-native-picker-select@^8.1.0:
   version "8.1.0"

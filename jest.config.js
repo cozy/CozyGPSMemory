@@ -5,7 +5,7 @@ module.exports = {
     '^.+\\.(js|jsx)$': 'babel-jest'
   },
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native(-.*)?|@react-native(-community)?|p-timeout?|p-wait-for?|@notifee?)/)'
+    'node_modules/(?!((jest-)?react-native(-.*)?|@react-native(-community)?|p-timeout?|p-wait-for?|@notifee?|@sentry/react-native)/)'
   ],
   rootDir: '.',
   testMatch: ['**/?(*.)+(spec|test).[jt]s?(x)']
